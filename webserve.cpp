@@ -1,8 +1,12 @@
 #include "webserve.hpp"
 #include <_types/_intmax_t.h>
 #include <codecvt>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <iterator>
+#include <sstream>
 #include <string>
 #include <sys/_types/_fd_def.h>
 #include <sys/_types/_timeval.h>
@@ -74,7 +78,21 @@ int      Client::getSocketFd() const
 
 void	Client::handle_request()
 {
-	
+	//set request line
+	//set request header 
+	//set body 
+	std::string token;
+	std::stringstream s(request);
+	std::cout << "|---------REQUEST---------|" << std::endl;
+	getline(s,token);
+	// std::cout << "------BEFORE-------" << std::endl;
+	// std::cout << request << std::endl;
+	_request.set_request_line_values(token);
+	request.erase(0 , request.find('\n') + 1);
+	// std::cout << "------AFTER--------" << std::endl;
+	// std::cout << request << std::endl;
+	_request.set_request_header_values(request);
+	std::cout << "|-------------------------|" << std::endl;
 }
 
 std::string    Server::getServerAddr() const
@@ -179,11 +197,11 @@ void	Server::readFromClient(int socket, int i)
 		std::cout << "ERROR in read" << std::endl;
 		exit(1);
 	}
-	std::cout << buffer << std::endl;
 	clients[i].request.append(buffer, nbytes);
 	if (nbytes < buffer_size)
 	{
 		clients[i].handle_request();
+		exit(0);
 		FD_SET(socket, &write_sockets);
 	}
 	clients[i]._init_time = get_time();

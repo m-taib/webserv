@@ -1,6 +1,4 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <string>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -13,8 +11,8 @@
 #include <utility>
 #include <vector>
 #include <stdlib.h>
-# include <sys/time.h>
-
+#include <sys/time.h>
+#include "request.hpp"
 
 
 typedef struct sockaddr_in SC_IN;
@@ -32,7 +30,8 @@ class Client
     private :
     
         Client();
-        int     _socket;
+        int             _socket;
+        Request         _request;
 };
 
 class Server
