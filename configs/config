@@ -1,0 +1,42 @@
+server
+{
+	listen localhost:8080;
+	server_name example.com;
+	root /usr/share/nginx/html;
+	index index.html index.htm;
+	autoindex on;
+
+	location /old-page
+	{
+		root /usr/share/nginx/css;
+		autoindex on;
+		return 301 /new-page;
+	}
+	location /files
+	{
+		autoindex on;
+	}
+	client_max_body_size 10M;
+	error_page 404 /404.html;
+	location /404.html
+	{
+		return 301 /new-page;
+	}
+	error_page 500 502 503 504 /50x.html;
+	location /50x.html 
+	{
+		return 301 /new-page;
+	}
+}
+server
+{
+	listen 10.11.2.5:8090;
+	location ~/.php$
+	{
+		root index.html;
+	}
+}
+server
+{
+	listen 0.0.0.0:9000;
+}

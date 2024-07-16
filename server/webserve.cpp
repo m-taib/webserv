@@ -1,14 +1,18 @@
-#include "webserve.hpp"
+#include "../includes/webserve.hpp"
+#include "../includes/request.hpp"
+#include "../includes/response.hpp"
 #include <_types/_intmax_t.h>
 #include <codecvt>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <iostream>
 #include <iterator>
 #include <sstream>
 #include <string>
 #include <sys/_types/_fd_def.h>
+#include <sys/_types/_size_t.h>
 #include <sys/_types/_timeval.h>
 #include <vector>
 
@@ -16,29 +20,30 @@ int      Server::_max_fd = 0;
 
 Server::Server()
 {
+
 }
 Server::Server(std::string filename)
 {
 	std::fstream    file;
     std::string     line;
 	std::string 	token;
-
+	
     file.open(filename.c_str(), std::ios::in);
     if (file.is_open())
     {
         while (getline(file, line))
         {
-			if (line[0] != ' ' && line[0] != '\t')
-				continue;
-			token = line.substr(line.find('l'), line.length());
-			token = token.substr(token.find(' '), token.length());
-			std::string addr = token.substr(1, token.find(':') -1);
-			std::string port = token.substr(token.find(':') + 1, (token.length() - token.find(':')) - 2);
-			// std::cout << addr << ":" << port << std::endl;
+			if (line == "server")
+			{
+				_config_vec.push_back(ServerConfig(file));
+				_config_vec.back().extract_data();
+				// exit(0);
+			}
 			lunchServer();
-			bindSocket(addr, stoi(port));
+			bindSocket();
 		}
 	}
+
 }
 
 int      Server::getSocketFd() const
@@ -65,7 +70,7 @@ long	get_time(void)
 	return (tv.tv_sec);
 }
 
-Client::Client(int sc)
+Client::Client(int sc) 
 {
 	_socket = sc;
 	_init_time = -1;
@@ -74,25 +79,6 @@ Client::Client(int sc)
 int      Client::getSocketFd() const
 {
 	return _socket;
-}
-
-void	Client::handle_request()
-{
-	//set request line
-	//set request header 
-	//set body 
-	std::string token;
-	std::stringstream s(request);
-	std::cout << "|---------REQUEST---------|" << std::endl;
-	getline(s,token);
-	// std::cout << "------BEFORE-------" << std::endl;
-	// std::cout << request << std::endl;
-	_request.set_request_line_values(token);
-	request.erase(0 , request.find('\n') + 1);
-	// std::cout << "------AFTER--------" << std::endl;
-	// std::cout << request << std::endl;
-	_request.set_request_header_values(request);
-	std::cout << "|-------------------------|" << std::endl;
 }
 
 std::string    Server::getServerAddr() const
@@ -128,9 +114,13 @@ void	Server::lunchServer()
 	fds.push_back(_socket_fd);
 }
 
-void	Server::bindSocket(std::string addr, int port)
+void	Server::bindSocket()
 {
 	struct sockaddr_in server_adress;
+	DIRS_PAIR dirs;
+	std::string		value;
+	std::string		addr;
+	int		port;
 
 	memset((char *)&server_adress, 0, sizeof(server_adress)); 
 	server_adress.sin_family = AF_INET; 
@@ -140,6 +130,18 @@ void	Server::bindSocket(std::string addr, int port)
 	// 	perror("inet_pton");
 	// 	exit(1);
 	// }
+	dirs = _config_vec.back().get_dirs();
+	value = dirs["listen"].back();
+	if (dirs.find("listen") == dirs.end())
+	{
+		std::cerr << "DIRECTIVE NOT FOUND" << std::endl;
+		exit(0);
+	}
+	
+	addr = value.substr(0, value.find(':'));
+	port = stoi(value.substr(value.find(':') + 1, value.length() - addr.length()));
+	std::cout << "addresse => " << addr << std::endl;
+	std::cout << "port => " << port << std::endl;
 	server_adress.sin_port = htons(port); 
 	if (bind(fds.back(),(struct sockaddr *)&server_adress,sizeof(server_adress))) 
 	{ 
@@ -175,6 +177,7 @@ void	Server::acceptConnections(int socketfd, fd_set& current_sockets, std::vecto
 	// 	perror("calling fcntl");
 	// 	exit(EXIT_FAILURE);        
 	// }
+
 	if (client_fd > Server::_max_fd)
 		Server::_max_fd = client_fd;
 	printf("New client connected from %s:%d (socket: %d)\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port), client_fd);	
@@ -184,35 +187,67 @@ void	Server::acceptConnections(int socketfd, fd_set& current_sockets, std::vecto
 
 }
 
+
+Request&         Client::getRequest() 
+{
+	return _request;
+}
+
+Response&         Client::getResObj()
+{
+	return _response;
+}
+
 void	Server::readFromClient(int socket, int i)
 {
 	int buffer_size = 1024;
-	char buffer[buffer_size];
-	std::memset(buffer, 0, buffer_size);
+	char buffer[buffer_size + 1];
+	std::memset(buffer, 0, buffer_size + 1);
 
 	int nbytes = read(socket, buffer, buffer_size);
 
 	if(nbytes == 0 || nbytes == -1)
 	{
-		std::cout << "ERROR in read" << std::endl;
+		std::cout << "ERROR IN READ" << std::endl;
 		exit(1);
 	}
+	// std::cout << "bytes readed : " << nbytes << std::endl;
 	clients[i].request.append(buffer, nbytes);
+	// clients[i].request += buffer;
 	if (nbytes < buffer_size)
 	{
-		clients[i].handle_request();
-		exit(0);
+		// std::cout << "-------REQUEST--------" << std::endl;
+		// std::cout << clients[i].request << std::endl;
+		clients[i].getRequest().parse_request(clients[i].request);
+		// clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd());
+	
+		// std::cout << "----------------------" << std::endl;
+		// exit(0);
 		FD_SET(socket, &write_sockets);
 	}
 	clients[i]._init_time = get_time();
 
 }
 
+void    Client::setResObj(Response response)
+{
+	_response = response;
+}
+
+
 void	Server::writeToClient(int sock, int i)
 {
 	std::string reply = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from server";
 
+	clients[i].setResObj(Response(clients[i].getRequest()));
+
+	clients[i].getResObj().setConfig(_config_vec);
+	clients[i].getResObj().handleRequest(clients[i].getSocketFd());
+	// send response
+	// clients[i].getResObj();
 	write(sock, reply.c_str(), reply.length());
+	// clients[i].handle_request_errors();
+
 	FD_CLR(sock, &write_sockets);
 	// FD_CLR(sock, &current_sockets);
 	// close(sock);
@@ -310,9 +345,10 @@ int		main(int ac, char **av)
 	// get server config , parse it && create sockets and bind them 
 	
 	Server server(av[1]);
-
-	// 
-
-	server.establishConnections();
+	try {
+		server.establishConnections();
+	} catch (...) {
+		std::cout << "THROWED EXCEPTION" << std::endl;
+	}
 	return (0);
 }
