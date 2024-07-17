@@ -11,11 +11,12 @@
 #include <string.h>
 #include <sstream>
 #include <vector>
+#include <sys/stat.h>
 #include "config_file.hpp"
 
-#define DIR 0
+#define DIR 1
 #define FILE 0
-
+#define OFF 0
 class Response
 {
     public :
@@ -29,7 +30,7 @@ class Response
         const std::string&          getResponse() const;
 
         ServerConfig&               getMacthedServer(std::string&);
-        DIRS_PAIR                   getMacthedLocation(std::string);
+        void                        getMacthedLocation(std::string);
         
         void                        handleRequest(int fd);
         void                        setConfig(std::vector<ServerConfig>&);
@@ -45,9 +46,19 @@ class Response
         void                         checkBodySize(const unsigned long&, int);
 
         void                         handleGetMethod();
-        int                         get_resource_type(std::string&);
+        int                          get_resource_type(std::string&);
 
         //|=======================|
+
+        //|=====GET METHOD======|
+        
+        int     checkPathInRoot(std::string&);
+        int     getResourceType(std::string&);
+        int     isDirHasIndexFiles();
+        int     getAutoIndex();
+        int     isUriHasSlashInend(const std::string&);
+        //|=======================|
+
     private :
 
 

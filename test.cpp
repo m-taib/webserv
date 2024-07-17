@@ -1,37 +1,34 @@
-
 #include <string>
 #include <vector>
+#include <iostream>
 
+std::vector<std::string> _locations;
 
-int     getMacthedLocation(std::string path)
+void     getMacthedLocation(std::string path)
 {
     
+    if (path.rfind("/") == std::string::npos)
+        return ;
     for (size_t i = 0; i < _locations.size() ; i++)
     {
-        if (path == (_locations[i].first.c_str() + 1))
+        if (path == _locations[i])
         {
-            return _locations[i].second;
+        std::cout << _locations[i] << std::endl;
+        return ;
         }
     }
     int length;
-
-    if (path.rfind("/") == std::string::npos)
-    {
-        length = path.length();
-    }
-    else 
-        length = path.rfind("/");
+    
+    length = path.rfind("/");
     getMacthedLocation(path.substr(0, length));
-    throw "NOT FOUND";
 }
 
 int     main()
 {
-    std::vector<std::string> values;
 
-    values.push_back("/usr/bin");
-    values.push_back("/usr/bin/ls");
-    values.push_back("/usr");
-    getMacthedLocation("/usr/bin/ls", values);
+    _locations.push_back("/usr/bin");
+    _locations.push_back("/usr/bin/ls");
+    getMacthedLocation("/usr/bin/ls/wc");
+
     return (0);
 }

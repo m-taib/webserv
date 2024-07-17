@@ -1,4 +1,5 @@
 #include "../includes/response.hpp"
+#include <_stdio.h>
 #include <algorithm>
 #include <iostream>
 #include <sstream>
@@ -69,26 +70,16 @@ ServerConfig&     Response::getMacthedServer(std::string& host)
     throw "HOST VALUE NOT MATCHED";
 }
 
-DIRS_PAIR     Response::getMacthedLocation(std::string path)
+void     Response::getMacthedLocation(std::string path)
 {
-    
+     if (path.rfind("/") == std::string::npos)
+        return ;
     for (size_t i = 0; i < _locations.size() ; i++)
     {
         if (path == (_locations[i].first.c_str() + 1))
-        {
-            return _locations[i].second;
-        }
+            location_dirs = _locations[i].second;
     }
-    int length;
-
-    if (path.rfind("/") == std::string::npos)
-    {
-        length = path.length();
-    }
-    else 
-        length = path.rfind("/");
-    getMacthedLocation(path.substr(0, length));
-    throw "NOT FOUND";
+    getMacthedLocation(path.substr(0, path.rfind("/")));
 }
 
 void        Response::setConfig(std::vector<ServerConfig>& config_vec)
@@ -158,21 +149,86 @@ void       Response::is_location_have_redirection()
 
 // }
 
+//|=====GET METHOD======|
+
+int     Response::checkPathInRoot(std::string& path)
+{
+    if (access(path.c_str(), F_OK) == -1)
+        return (0);
+    return (1);
+}
+
+int     Response::getResourceType(std::string& path)
+{
+    struct stat statbuf;
+    int ret;
+    
+    ret = stat(path.c_str(), &statbuf);
+
+    if (ret == 0) 
+    {
+        if (S_ISREG(statbuf.st_mode)) 
+            return FILE;
+        else if (S_ISDIR(statbuf.st_mode)) 
+            return DIR;
+    }
+    else 
+        return -1;
+}
+
+int     Response::isDirHasIndexFiles()
+{
+    if (location_dirs.find("index") != location_dirs.end())
+        return (1);
+    return (0);
+}
+int     Response::isUriHasSlashInend(const std::string& path)
+{
+    if (path[path.length() - 1] != '/')
+    {
+        //location = path += "/";
+        return (0);
+    }
+    return (1);
+}
+
+
+int     Response::getAutoIndex()
+{
+    if (_conf.get_dirs().find("autoindex") != _conf.get_dirs().end())
+    {
+        return (1);
+    }
+    return (OFF);
+}
+
+//|=======================|
+
 void       Response::handleGetMethod()
 {
     std::string path;
 
     path = _conf.getRoot();
     path += _request.get_request_line().getPath();
-    //if (requested resource not found in root)
-        throw "404 Not Found";
 
-    if (get_resource_type(path) == DIR)
+    if (!checkPathInRoot(path))
+        throw "HTTP/1.1 404 Not Found";
+    if (getResourceType(path) == DIR)
     {
-        // if (is_uri_has_/_in_end())
-        // {
-        //     throw "301 Moved Permanently";
-        // }
+        if (!isUriHasSlashInend(_request.get_request_line().getPath()))
+            throw "301 Moved Permanently";
+        else if (!isDirHasIndexFiles())
+        {
+            if (getAutoIndex() == OFF)
+                throw "HTTP/1.1 403 Forbidden";
+            else 
+                throw "HTTP/1.1 200 OK";    
+        }
+        else 
+        {
+        
+        }
+        
     }
 }
 
@@ -195,16 +251,24 @@ void    Response::handleRequest(int fd)
         path_value = _request.get_request_line().getPath();
         while (std::getline(ss, path_value, '/'));
         std::cout << "PATH VALUE : " << path_value << std::endl;
-        location_dirs = getMacthedLocation(path_value);
-        set_location_vars();
         checkHttpVersion(_request.get_request_line().getHttpVersion());
+        getMacthedLocation(path_value);
+        if (location_dirs.empty())
+        {
+            set_location_vars();
+            path_value = (_conf.get_dirs()["root"].front() += path_value);
+            //check if path value founded
+            //else
+            throw "HTTP/1.1 404 Not Found";
+            //404 Not Found
+        }   
         is_location_have_redirection();
         //check if allowed_method dir inherit its value
         method = _request.get_request_line().getMethod();
         checkMethodValidity(method, location_dirs["allowed_methods"]);
         if (method == "GET")
             handleGetMethod();
-    } 
+    }
     catch (std::string& exp) 
     {
         

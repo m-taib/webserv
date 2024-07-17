@@ -19,7 +19,7 @@ class ServerConfig : public CommonDirectives
 
         DIRS_PAIR _dirs;
         std::vector<LOCATION_PAIR >  _locations;
-        std::vector<std::string> allowed_dirs;
+        std::vector<std::string>    allowed_dirs;
 
     public :
 
