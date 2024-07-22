@@ -19,15 +19,15 @@ std::string HttpResponseHeader::getLocation() const
     return _location;
 }
 
-void     HttpResponseHeader::setContentType(std::string& content_type)
+void     HttpResponseHeader::setContentType(std::string content_type)
 {
     _content_type = content_type;
 }
-void     HttpResponseHeader::setContentLength(std::string& content_length)
+void     HttpResponseHeader::setContentLength(std::string content_length)
 {
     _content_length = content_length;
 }
-void     HttpResponseHeader::setLocation(std::string& location)
+void     HttpResponseHeader::setLocation(std::string location)
 {
     _location =location;
 }

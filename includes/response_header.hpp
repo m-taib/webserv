@@ -16,9 +16,9 @@ class HttpResponseHeader
         std::string getContentLength() const;
         std::string getLocation() const;
 
-        void     setContentType(std::string&);
-        void     setContentLength(std::string&);
-        void     setLocation(std::string&);
+        void     setContentType(std::string);
+        void     setContentLength(std::string);
+        void     setLocation(std::string);
 
     private :
 

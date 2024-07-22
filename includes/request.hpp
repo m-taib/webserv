@@ -27,7 +27,9 @@ class Request
         int         notAllowedChar(const std::string& path);
         void        isReqWellFormed(int sock_fd);
         int         isUriTooLong(int uri_size);
-
+        std::string convertChars(const std::string& path);
+        int         hexToInt(const std::string& hexStr);
+        
     private :
     
         HttpRequestLine     _request_line;

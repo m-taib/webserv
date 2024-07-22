@@ -5,31 +5,31 @@ HttpResponseLine::HttpResponseLine()
 
 }
 
-const std::string& HttpResponseLine::get_method() const
-{
-    return _method;
-}
-
-const std::string& HttpResponseLine::get_path() const
-{
-    return _path;
-}
-
-const std::string& HttpResponseLine::get_http_version() const
+const std::string& HttpResponseLine::getHttpVersion() const
 {
     return _http_version;
 }
 
-void     HttpResponseLine::set_method(std::string method)
+const std::string& HttpResponseLine::getStatus() const
 {
-    _method = method;
-}
-void     HttpResponseLine::set_path(std::string path)
-{
-    _path = path;
+    return _status;
 }
 
-void     HttpResponseLine::set_http_version(std::string http_version)
+const std::string& HttpResponseLine::getMessage() const
+{
+    return _message;
+}
+
+void     HttpResponseLine::setHttpVersion(std::string http_version)
 {
     _http_version = http_version;
+}
+void     HttpResponseLine::setStatus(std::string status)
+{
+    _status = status;
+}
+
+void     HttpResponseLine::setMessage(std::string message)
+{
+    _message = message;
 }

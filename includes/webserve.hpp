@@ -15,29 +15,12 @@
 #include "request.hpp"
 #include "config_file.hpp"
 #include "response.hpp"
+#include "client.hpp"
+
 
 typedef struct sockaddr_in SC_IN;
 
-class Client
-{
-    public:
-        Client(int sc);
-        int             getSocketFd() const;
-        
-        std::string     request;
-        int             _init_time;        
-        Request&          getRequest();
-        Response&         getResObj();
-        void              setResObj(Response);
-
-    private :
-    
-        Client();
-        int             _socket;
-        Request         _request;
-        Response        _response;
-        // ServerConfig    _server;
-};
+class Response;
 
 class Server
 {
@@ -55,18 +38,22 @@ class Server
         void	        writeToClient(int sock, int i);
         void	        readFromClient(int socket, int i);
         void	        closeConnection(int sock, int i);
+
+        // static std::map<std::string, std::string > getMimeTypes();
+        static void		initializeMap(std::string file_name);
         
         static int      _max_fd;
 
     private :
         Server();
 
-        int             _socket_fd;
-	    int             _port;
-	    fd_set          current_sockets, ready_sockets, write_sockets;
-        std::string     _addr;    
-        std::vector<int >   fds;
-        std::vector<Client > clients; 
-        std::vector<ServerConfig> _config_vec;
+        int                         _socket_fd;
+	    int                         _port;
+	    fd_set                      current_sockets, ready_sockets, write_sockets;
+        std::string                 _addr;    
+        std::vector<int >           fds;
+        std::vector<Client >        clients; 
+        std::vector<ServerConfig>   _config_vec;
+
 };
 

@@ -14,7 +14,11 @@
 #include <sys/_types/_fd_def.h>
 #include <sys/_types/_size_t.h>
 #include <sys/_types/_timeval.h>
+#include <sys/fcntl.h>
 #include <vector>
+#include "../includes/response.hpp"
+
+
 
 int      Server::_max_fd = 0;
 
@@ -43,7 +47,8 @@ Server::Server(std::string filename)
 			bindSocket();
 		}
 	}
-
+	file.close();
+	Response::initializeMap("configs/mime.types");
 }
 
 int      Server::getSocketFd() const
@@ -70,16 +75,7 @@ long	get_time(void)
 	return (tv.tv_sec);
 }
 
-Client::Client(int sc) 
-{
-	_socket = sc;
-	_init_time = -1;
-}
 
-int      Client::getSocketFd() const
-{
-	return _socket;
-}
 
 std::string    Server::getServerAddr() const
 {
@@ -109,6 +105,7 @@ void	Server::lunchServer()
 		perror("setsockopt");
 		exit(1);
   	}
+	std::cout << "Server socket : " << _socket_fd << std::endl;
 	if (_socket_fd > _max_fd)
 		_max_fd = _socket_fd;
 	fds.push_back(_socket_fd);
@@ -187,17 +184,6 @@ void	Server::acceptConnections(int socketfd, fd_set& current_sockets, std::vecto
 
 }
 
-
-Request&         Client::getRequest() 
-{
-	return _request;
-}
-
-Response&         Client::getResObj()
-{
-	return _response;
-}
-
 void	Server::readFromClient(int socket, int i)
 {
 	int buffer_size = 1024;
@@ -206,7 +192,13 @@ void	Server::readFromClient(int socket, int i)
 
 	int nbytes = read(socket, buffer, buffer_size);
 
-	if(nbytes == 0 || nbytes == -1)
+	if(nbytes == 0)
+	{
+		closeConnection(clients[i].getSocketFd(), i);
+
+		return ;
+	}
+	if(nbytes == -1)
 	{
 		std::cout << "ERROR IN READ" << std::endl;
 		exit(1);
@@ -219,6 +211,7 @@ void	Server::readFromClient(int socket, int i)
 		// std::cout << "-------REQUEST--------" << std::endl;
 		// std::cout << clients[i].request << std::endl;
 		clients[i].getRequest().parse_request(clients[i].request);
+		clients[i].request.clear();
 		// clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd());
 	
 		// std::cout << "----------------------" << std::endl;
@@ -229,15 +222,9 @@ void	Server::readFromClient(int socket, int i)
 
 }
 
-void    Client::setResObj(Response response)
-{
-	_response = response;
-}
-
-
 void	Server::writeToClient(int sock, int i)
 {
-	std::string reply = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from server";
+	// std::string reply = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from server";
 
 	clients[i].setResObj(Response(clients[i].getRequest()));
 
@@ -245,9 +232,11 @@ void	Server::writeToClient(int sock, int i)
 	clients[i].getResObj().handleRequest(clients[i].getSocketFd());
 	// send response
 	// clients[i].getResObj();
-	write(sock, reply.c_str(), reply.length());
+	// std::cout << "|================RESPONSE================|" << std::endl;
+    // std::cout << clients[i].getResObj().getResponse();
+    // std::cout << "|====================================|" << std::endl;
+	write(sock, clients[i].getResObj().getResponse().c_str(), clients[i].getResObj().getResponse().length());
 	// clients[i].handle_request_errors();
-
 	FD_CLR(sock, &write_sockets);
 	// FD_CLR(sock, &current_sockets);
 	// close(sock);
@@ -323,7 +312,9 @@ void	Server::establishConnections()
 			if (FD_ISSET(clients[i].getSocketFd(), &ready_sockets))
 				readFromClient(clients[i].getSocketFd(), i);
 			if (FD_ISSET(clients[i].getSocketFd(), &write_sockets))
+			{
 				writeToClient(clients[i].getSocketFd(), i);
+			}
 		}
 		
 	}
@@ -343,12 +334,13 @@ int		main(int ac, char **av)
 	// creating a socket
 
 	// get server config , parse it && create sockets and bind them 
-	
+
 	Server server(av[1]);
-	try {
+
+	// try {
 		server.establishConnections();
-	} catch (...) {
-		std::cout << "THROWED EXCEPTION" << std::endl;
-	}
+	// } catch (char const* exp) {
+	// 	std::cout << exp << std::endl;
+	// }
 	return (0);
 }

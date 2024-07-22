@@ -25,24 +25,22 @@ const std::string&        Request::get_body() const
 
 void    Request::set_request_line_values(std::string& request_line)
 {
+    std::stringstream s(request_line);
+    std::string token;
     std::string values[3];
     int     i = -1;
-    char * token;
-
-    token = strtok((char *)request_line.c_str()," ");
-    while (token != NULL)
-    {
+    
+   
+    while (s >> token)
         values[++i] = token;
-        token = strtok(NULL, " ");
-    }
-
+    
     _request_line.setMethod(values[0]);
     _request_line.setPath(values[1]);
     _request_line.setHttpVersion(values[2]);
     _request_line.setQueryParams("");
     std::cout << "method : " << _request_line.getMethod() << std::endl;
     std::cout << "path : " << _request_line.getPath() << std::endl;
-    std::cout << "http_version : " << _request_line.getHttpVersion() << std::endl;
+    std::cout << "http_version : |" << _request_line.getHttpVersion() << "|" << std::endl;
 }
 
 void    Request::set_request_header_values(std::string request_header)
@@ -52,11 +50,14 @@ void    Request::set_request_header_values(std::string request_header)
     std::string key;
     std::string value;
 
+    _body = "";
     while (getline(s, token))
     {
         if (token == "\r")
         {
-            _body = token.substr(token.find('\r') + 1, token.length());
+            while (getline(s, token))
+                _body += token;
+   
             _request_header.set_req_state(1);
             break ;
         }
@@ -90,15 +91,54 @@ void	Request::parse_request(std::string content)
 	std::cout << "|------------------------------|" << std::endl;
 }
 
+int             Request::hexToInt(const std::string& hexStr) 
+{
+    return std::stoi(hexStr, nullptr, 16);
+}
+
+std::string     Request::convertChars(const std::string& path)
+{
+    std::string str = "";
+    std::string allowed_chars;
+    std::string nums = "0123456789";
+    std::string num = "";
+
+    allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%";
+    for (int i = 0; i < path.size() ; i++)
+    {
+        num.clear();
+        if (path[i] != '%' && allowed_chars.find(path[i]) != std::string::npos)
+            str += path[i];
+        else
+        {
+            if (path[++i])
+            {
+                while (path[i] && nums.find(path[i]) != std::string::npos)
+                    num += path[i++];
+
+                if (!num.empty())
+                {
+                    num = hexToInt(num); 
+                    str += num;
+                }
+            }
+        }
+    }
+
+    return str;
+}
+
 int      Request::notAllowedChar(const std::string& path)
 {
     std::string allowed_chars;
+    std::string converted_str;
 
     allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%";
     
-    for(int i = 0; i < path.size(); i++)
+    converted_str = convertChars(path);
+    for(int i = 0; i < converted_str.size(); i++)
     {
-        if (allowed_chars.find(path[i]) == std::string::npos)
+        if (allowed_chars.find(converted_str[i]) == std::string::npos)
             return (1);
     }
     return (0);
@@ -118,18 +158,22 @@ void    Request::isReqWellFormed(int sock_fd)
     if ((directives.find("Host") == directives.end()  
         || directives["Host"].empty() 
         || !get_request_header().get_req_state()))
-        throw "HTTP/1.1 400 Bad Request";
-    else if (directives.find("Transfer-Encoding") != directives.end() && directives["Transfer-Encoding"] != "chunked")
-       throw "HTTP/1.1 501 Not Implemented";
-    else if ((directives.find("Transfer-Encoding") == directives.end() 
-            && directives.find("Content-Length") == directives.end() 
-            && _request_line.getMethod() == "POST") || notAllowedChar(_request_line.getPath()))   
-       throw "HTTP/1.1 400 Bad Request\r\n";
+        throw "400 Bad Request";
     else if (directives.find("Transfer-Encoding") != directives.end() 
             && directives["Transfer-Encoding"] != "chunked" && directives.find("Content-Length") != directives.end() 
             && directives["Content-Length"].empty())   
-       throw "HTTP/1.1 204 No content\r\n";
-    isUriTooLong(_request_line.getPath().length());
+    {
+        std::cout << "Transfer-Encoding error " << std::endl;
+        throw "400 Bad Request";
+    }
+    else if (directives.find("Transfer-Encoding") != directives.end() && directives["Transfer-Encoding"] != "chunked")
+       throw "501 Not Implemented";
+    else if ((directives.find("Transfer-Encoding") == directives.end() 
+            && directives.find("Content-Length") == directives.end() 
+            && _request_line.getMethod() == "POST") || notAllowedChar(_request_line.getPath()))   
+       throw "400 Bad Request";
+    else if (isUriTooLong(_request_line.getPath().length()))
+        throw "414 Request-URI Too Long";
 }
 
 

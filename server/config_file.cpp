@@ -45,7 +45,7 @@ ServerConfig::ServerConfig(std::fstream& file)
 		{
 			std::stringstream st(line);
 			std::string location;
-			std::cout << "---------INSIDE LOCATION----------" << std::endl;
+			// std::cout << "---------INSIDE LOCATION----------" << std::endl;
 			st >> location;
 			st >> location;
 			std::map<std::string, std::vector<std::string> > dirs;
@@ -74,35 +74,35 @@ ServerConfig::ServerConfig(std::fstream& file)
 				}
 			}
 			
-			std::cout << "KEY => " << location <<  std::endl;
+			// std::cout << "KEY => " << location <<  std::endl;
 			_locations.push_back(std::make_pair(location, dirs));
 			DIRS_PAIR::iterator     it;
 
-			std::cout << "PRINT DIRECTIVES" << std::endl;
+			// std::cout << "PRINT DIRECTIVES" << std::endl;
 			for ( it = dirs.begin(); it != dirs.end(); it++)
 			{
-				std::cout << it->first << " => " ;
+				// std::cout << it->first << " => " ;
 				for (size_t i = 0; i < it->second.size() ; i++)
 				{
-					std::cout << it->second[i] << " ";
+					// std::cout << it->second[i] << " ";
 				}
-				std::cout << std::endl;
+				// std::cout << std::endl;
 			}
-			std::cout << "--------------------" << std::endl;
-			std::cout << "---------END LOCATION----------" << std::endl;
+			// std::cout << "--------------------" << std::endl;
+			// std::cout << "---------END LOCATION----------" << std::endl;
 		}
 		else
 		{
 			s >> key;
-			std::cout << key << " => " ;
+			// std::cout << key << " => " ;
 			std::string token;
 			while (s >> value)
 			{
 				token =  value.substr(0, value.find(';'));
-				std::cout << token << " ";
+				// std::cout << token << " ";
 				_dirs[key].push_back(token);
 			}
-			std::cout << std::endl;
+			// std::cout << std::endl;
 			
 
 		}
@@ -124,7 +124,9 @@ ServerConfig::ServerConfig(std::fstream& file)
 	// }
 	// std::cout << "----------------" << std::endl;
 
-
+	_root = "/Users/mtaib/Desktop/sockets-programing";
+	_index = "login.html";
+	_autoindex = "off";
 }
 
 std::vector<std::string>    ServerConfig::split_string(std::string& dirs, std::string del)
@@ -162,6 +164,10 @@ void      ServerConfig::extract_data()
 		_error_log = _dirs["error_log"].front();
 	if (_dirs.find("access_log") != _dirs.end())
 		_access_log = _dirs["access_log"].front();
+	if (_dirs.find("index") != _dirs.end())
+		_index = _dirs["index"].front();
+	if (_dirs.find("alias") != _dirs.end())
+		_alias = _dirs["alias"].front();
 }
 
 std::vector<LOCATION_PAIR > ServerConfig::get_locations() const

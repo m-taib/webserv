@@ -13,10 +13,12 @@
 #include <vector>
 #include <sys/stat.h>
 #include "config_file.hpp"
+#include "auto_index.hpp"
 
 #define DIR 1
 #define FILE 0
 #define OFF 0
+
 class Response
 {
     public :
@@ -39,7 +41,7 @@ class Response
         void                        set_location_vars();
 
         //|=====Errors check======|
-        void                         is_location_have_redirection();
+        void                         isLocationHaveRedirection();
         void                         checkHttpVersion(const std::string&);
         void                         checkMethodValidity(const std::string&,std::vector<std::string>&);
         // int                         isUriTooLong(int&);
@@ -54,10 +56,15 @@ class Response
         
         int     checkPathInRoot(std::string&);
         int     getResourceType(std::string&);
-        int     isDirHasIndexFiles();
+        int     isDirHasIndexFiles(std::string);
         int     getAutoIndex();
+        std::string     getIndex();
+
         int     isUriHasSlashInend(const std::string&);
         //|=======================|
+
+        static void	initializeMap(std::string file_name);
+        static std::map<std::string, std::string > getMimeTypes() ;
 
     private :
 
@@ -75,6 +82,9 @@ class Response
         DIRS_PAIR       _directives;
         std::vector<std::string> _http_versions;
         std::vector<std::string> _http_methods;
+        static std::map<std::string, std::string > _mime_types;
+        std::string     _path;
+        std::string     _location;
 };
 
 #endif

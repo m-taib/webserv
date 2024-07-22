@@ -28,6 +28,11 @@ std::string     CommonDirectives::getAccessLog() const
 
 }
 
+std::string     CommonDirectives::getIndex() const
+{
+    return _index;
+
+}
 long            CommonDirectives::getClientMaxBodySize() const
 {
     return _client_max_body_size;
@@ -53,7 +58,22 @@ void            CommonDirectives::setAccessLog(std::string& access_log)
 {
     _access_log = access_log;
 }
+void            CommonDirectives::setIndex(std::string& index)
+{
+    _index = index;
+}
+
+void            CommonDirectives::setAlias(std::string& alias)
+{
+    _alias = alias;
+}
+
 void            CommonDirectives::setClientMaxBodySize(long client_max_body_size)
 {
     _client_max_body_size = client_max_body_size;
+}
+
+std::string     CommonDirectives::getAlias() const
+{
+    return _alias;
 }

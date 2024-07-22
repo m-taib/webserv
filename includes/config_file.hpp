@@ -26,6 +26,8 @@ class ServerConfig : public CommonDirectives
         ServerConfig();
         ServerConfig(std::fstream& file);
         DIRS_PAIR get_dirs() const;
+
+        std::map<std::string, std::string > getMimeTypes() const;
         std::vector<LOCATION_PAIR > get_locations() const;
         void      extract_data();
         std::vector<std::string>    split_string(std::string&, std::string);
