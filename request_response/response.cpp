@@ -14,7 +14,10 @@ std::map<std::string, std::string > Response::_mime_types;
 
 Response::Response() 
 {
-   
+    _response_line.setHttpVersion("HTTP/1.1");
+    _response_line.setStatus("200");
+    _response_line.setMessage("OK");
+
 }
 
 Response::Response(Request request) 
@@ -53,7 +56,7 @@ std::map<std::string, std::string > Response::getMimeTypes()
 	return _mime_types;
 }
 
-const HttpResponseLine&    Response::getResponseLine() const
+HttpResponseLine&    Response::getResponseLine() 
 {
     return _response_line;
 }
@@ -105,9 +108,11 @@ ServerConfig&     Response::getMacthedServer(std::string& host)
         // you have to compare it to all host value
         if (host == _config_vec[i].get_dirs()["listen"].front())
         {
+            std::cout << "config host : " << host << std::endl;
             return _config_vec[i];
         }
     }
+    std::cout << "host :" << host << std::endl;
     throw "HOST VALUE NOT MATCHED";
 }
 
@@ -212,11 +217,6 @@ void       Response::isLocationHaveRedirection()
     }
     
 }
-
-// int     get_resource_type(std::string& path)
-// {
-
-// }
 
 //|=====GET METHOD======|
 
@@ -358,6 +358,45 @@ void       Response::handleGetMethod()
 
 }
 
+void    Response::createResponse(std::string& path)
+{
+    std::string ext;
+    
+    if (path.find(".") != std::string::npos)
+    {
+        ext = path.substr(path.find(".") + 1, (path.length() - path.find(".")));
+        ext = Response::_mime_types[ext];
+    }
+    else 
+        ext = "text/html";
+    _response_header.setContentType(ext);
+
+    if (_body.empty())
+    {
+        _body =     "<!DOCTYPE html>\n" 
+                    "<html lang=\"en\">\n" 
+                    "<head>\n" 
+                    "    <meta charset=\"UTF-8\">\n"
+                    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+                    "    <title>" + _response_line.getStatus() + " " + _response_line.getMessage() + "</title>\n"
+                    "</head>\n"
+                    "<body>\n"
+                    "    <h1>" +  _response_line.getStatus() + " " + _response_line.getMessage() + "</h1>\n"
+                    "</body>\n"
+                    "</html>";
+    }
+
+    _response_header.setContentLength(std::to_string(_body.length()));
+
+    _response = _response_line.getHttpVersion() + " " + _response_line.getStatus() + " " + _response_line.getMessage() + "\r\n" +
+    // "Content-Type: " + _response_header.getContentType() + "\r\n" +
+    "Content-Type: " + _response_header.getContentType() + "\r\n" +
+    "Content-Length: " + _response_header.getContentLength() + "\r\n" +
+    "Location: " + _response_header.getLocation() + "\r\n" +
+    // "Location: " + "" + "\r\n" +
+    "\r\n" + _body;
+
+}
 
 void    Response::handleRequest(int fd)
 {
@@ -402,8 +441,11 @@ void    Response::handleRequest(int fd)
 
         //  CHECK PATH IN ROOT
         std::cout << "P VAL : " << path_value << std::endl;
-        // if (!checkPathInRoot(path_value))
-        //     throw "404 Not Found";
+        if (!checkPathInRoot(path_value))
+        {
+            std::cout << "CHECK IN ROOT" << std::endl;
+            throw "404 Not Found";
+        }
         // |=================|
         
 
@@ -427,43 +469,10 @@ void    Response::handleRequest(int fd)
         _response_line.setMessage(exp.substr(exp.find(" ") + 1, exp.length() - _response_line.getStatus().length()));
        
     }
-    std::string ext;
-    
-    if (path.find(".") != std::string::npos)
-    {
-        ext = path.substr(path.find(".") + 1, (path.length() - path.find(".")));
-        ext = Response::_mime_types[ext];
-    }
-    else 
-        ext = "text/html";
-    _response_header.setContentType(ext);
-
-    if (_body.empty())
-    {
-        _body =     "<!DOCTYPE html>\n" 
-                    "<html lang=\"en\">\n" 
-                    "<head>\n" 
-                    "    <meta charset=\"UTF-8\">\n"
-                    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-                    "    <title>" + _response_line.getStatus() + " " + _response_line.getMessage() + "</title>\n"
-                    "</head>\n"
-                    "<body>\n"
-                    "    <h1>" +  _response_line.getStatus() + " " + _response_line.getMessage() + "</h1>\n"
-                    "</body>\n"
-                    "</html>";
-    }
-
-    _response_header.setContentLength(std::to_string(_body.length()));
-
-    _response = _response_line.getHttpVersion() + " " + _response_line.getStatus() + " " + _response_line.getMessage() + "\r\n" +
-    // "Content-Type: " + _response_header.getContentType() + "\r\n" +
-    "Content-Type: " + _response_header.getContentType() + "\r\n" +
-    "Content-Length: " + _response_header.getContentLength() + "\r\n" +
-    "Location: " + _response_header.getLocation() + "\r\n" +
-    // "Location: " + "" + "\r\n" +
-    "\r\n" + _body;
-
+    createResponse(path);
 }
+
+
 
 
 

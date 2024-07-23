@@ -53,12 +53,13 @@ void    Request::set_request_header_values(std::string request_header)
     _body = "";
     while (getline(s, token))
     {
+        if (token.rfind("\r") == std::string::npos)    
+            throw "400 Bad Request";
+
         if (token == "\r")
         {
-            while (getline(s, token))
-                _body += token;
-   
-            _request_header.set_req_state(1);
+            // while (getline(s, token))
+            //     _body += token;
             break ;
         }
         token = strtok((char *)token.c_str(),"\r");
@@ -80,6 +81,9 @@ void	Request::parse_request(std::string content)
 	std::stringstream s(content);
 	std::cout << "|---------REQUEST LINE---------|" << std::endl;
 	getline(s,token);
+    if (token.rfind("\r") == std::string::npos)    
+        throw "400 Bad Request";
+    
 	// std::cout << "------BEFORE-------" << std::endl;
 	// std::cout << content << std::endl;
 	set_request_line_values(token);
@@ -88,6 +92,9 @@ void	Request::parse_request(std::string content)
 	// std::cout << request << std::endl;
 	std::cout << "|------REQUEST HEADER----------|" << std::endl;
 	set_request_header_values(content);
+
+    // if body exist and method is post 
+
 	std::cout << "|------------------------------|" << std::endl;
 }
 
@@ -155,10 +162,14 @@ void    Request::isReqWellFormed(int sock_fd)
 {
     std::map<std::string, std::string> directives = get_request_header().get_directives();
 
-    if ((directives.find("Host") == directives.end()  
-        || directives["Host"].empty() 
-        || !get_request_header().get_req_state()))
+    if (_request_line.getMethod() == "GET" && !_body.empty())
         throw "400 Bad Request";
+    else if ((directives.find("Host") == directives.end()  
+        || directives["Host"].empty()))
+    {
+        std::cout << "Host error" << std::endl;
+        throw "400 Bad Request";
+    }
     else if (directives.find("Transfer-Encoding") != directives.end() 
             && directives["Transfer-Encoding"] != "chunked" && directives.find("Content-Length") != directives.end() 
             && directives["Content-Length"].empty())   
@@ -174,6 +185,11 @@ void    Request::isReqWellFormed(int sock_fd)
        throw "400 Bad Request";
     else if (isUriTooLong(_request_line.getPath().length()))
         throw "414 Request-URI Too Long";
+}
+
+void    Request::setBody()
+{
+
 }
 
 

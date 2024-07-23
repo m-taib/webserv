@@ -29,6 +29,7 @@ class Request
         int         isUriTooLong(int uri_size);
         std::string convertChars(const std::string& path);
         int         hexToInt(const std::string& hexStr);
+        void        setBody();
         
     private :
     

@@ -2,7 +2,7 @@
 
 HttpRequestLine::HttpRequestLine()
 {
-
+    _path = "";
 }
 
 const std::string& HttpRequestLine::getMethod() const

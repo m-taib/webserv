@@ -4,6 +4,7 @@ Client::Client(int sc)
 {
 	_socket = sc;
 	_init_time = -1;
+	request = "";
 }
 
 Request&         Client::getRequest() 

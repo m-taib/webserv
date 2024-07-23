@@ -25,7 +25,7 @@ class Response
         Response();
         Response(Request);
         
-        const HttpResponseLine&     getResponseLine() const;
+        HttpResponseLine&     getResponseLine() ;
         const HttpResponseHeader&   getResponseHeader() const;
         const std::string&          getBody() const;
 
@@ -65,6 +65,7 @@ class Response
 
         static void	initializeMap(std::string file_name);
         static std::map<std::string, std::string > getMimeTypes() ;
+        void        createResponse(std::string&);
 
     private :
 

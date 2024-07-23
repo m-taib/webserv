@@ -11,6 +11,7 @@
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <sys/_types/_fd_def.h>
 #include <sys/_types/_size_t.h>
 #include <sys/_types/_timeval.h>
@@ -49,6 +50,9 @@ Server::Server(std::string filename)
 	}
 	file.close();
 	Response::initializeMap("configs/mime.types");
+	_max_buff = 1024;
+	buffer_size = 1024;
+	_body_size = 0;
 }
 
 int      Server::getSocketFd() const
@@ -186,7 +190,7 @@ void	Server::acceptConnections(int socketfd, fd_set& current_sockets, std::vecto
 
 void	Server::readFromClient(int socket, int i)
 {
-	int buffer_size = 1024;
+	
 	char buffer[buffer_size + 1];
 	std::memset(buffer, 0, buffer_size + 1);
 
@@ -195,7 +199,6 @@ void	Server::readFromClient(int socket, int i)
 	if(nbytes == 0)
 	{
 		closeConnection(clients[i].getSocketFd(), i);
-
 		return ;
 	}
 	if(nbytes == -1)
@@ -205,13 +208,74 @@ void	Server::readFromClient(int socket, int i)
 	}
 	// std::cout << "bytes readed : " << nbytes << std::endl;
 	clients[i].request.append(buffer, nbytes);
+	int		pos;
+
+	pos = clients[i].request.find("\r\n\r\n");
+
+	if (clients[i].request.find("\r\n\r\n") != std::string::npos)
+	{
+		clients[i].getRequest().parse_request(clients[i].request);
+		clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd());
+	}
+	if (!clients[i].getRequest().get_request_line().getPath().empty())
+	{
+    	std::map<std::string, std::string> directives = clients[i].getRequest().get_request_header().get_directives();
+		int max_body_size;
+
+		clients[i].getResObj().setConfig(_config_vec);
+		max_body_size = clients[i].getResObj().getMacthedServer(clients[i].getRequest().get_request_header().get_directives()["Host"]).getClientMaxBodySize();
+		if (directives.find("Content-Length") != directives.end())
+		{
+			_max_buff = std::stoi(directives["Content-Length"]);
+
+			
+			// i have to convert body size to bit before compare values
+			std::cout << "MAX BODY SIZE : " << max_body_size << std::endl;
+
+			if (_max_buff > max_body_size)
+        		throw "413 Request Entity Too Large";
+		}
+		if (directives.find("Transfer-Encoding") != directives.end() && directives["Transfer-Encoding"] == "chunked"
+				&& clients[i].getRequest().get_request_line().getMethod() == "POST")
+		{
+			int j = pos + 4;
+
+			std::string hex_body_value = "";
+
+			while (clients[i].request[j])
+			{
+				if (clients[i].request[j] == '\n')
+					break ;
+				hex_body_value += clients[i].request[j];
+				j++;
+			}
+
+			int body_length = clients[i].getRequest().hexToInt(hex_body_value);
+			
+			if (body_length < buffer_size)
+				buffer_size = body_length;
+			_body_size += body_length;
+			if (_body_size > max_body_size)
+        		throw "413 Request Entity Too Large";
+			std::cout << "body value " << body_length << std::endl;
+		}
+	}
 	// clients[i].request += buffer;
-	if (nbytes < buffer_size)
+
+	//GET HEADERS VALUE 
+	if (nbytes < 1024)
 	{
 		// std::cout << "-------REQUEST--------" << std::endl;
 		// std::cout << clients[i].request << std::endl;
-		clients[i].getRequest().parse_request(clients[i].request);
+		std::string buff = buffer;
+
+		pos = clients[i].request.find("\r\n\r\n") + 4;
+		clients[i].request.erase(0, pos);
+		std::cout << "BODY : " << clients[i].request << std::endl;
 		clients[i].request.clear();
+		
+		// body 
+
 		// clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd());
 	
 		// std::cout << "----------------------" << std::endl;
@@ -300,8 +364,10 @@ void	Server::establishConnections()
 				acceptConnections(fds[i], current_sockets, clients);	
 		}
 		i = -1;
-		while (++i < clients.size())
+		std::cout << "client size : " << clients.size() << std::endl;
+		while (!clients.empty() && ++i < clients.size())
 		{
+			std::cout << "ENTER CLIENT LOOP " << std::endl;
 			std::cout << "clients[i]._init_time : " << clients[i]._init_time << std::endl;
 			if (get_time() - clients[i]._init_time > 5)
 			{
@@ -310,7 +376,25 @@ void	Server::establishConnections()
 				continue ;
 			}
 			if (FD_ISSET(clients[i].getSocketFd(), &ready_sockets))
-				readFromClient(clients[i].getSocketFd(), i);
+			{
+				try
+				{
+					readFromClient(clients[i].getSocketFd(), i);
+				}
+				catch (const char * excep)
+				{
+					 std::cout << "parsing excep : " << excep << std::endl;
+					std::string exp = excep;
+					clients[i].getResObj().getResponseLine().setStatus(exp.substr(0, exp.find(" ")));
+					clients[i].getResObj().getResponseLine().setMessage(exp.substr(exp.find(" ") + 1, 
+							exp.length() - clients[i].getResObj().getResponseLine().getStatus().length()));
+    				clients[i].getResObj().createResponse(exp);
+					write(clients[i].getSocketFd(), clients[i].getResObj().getResponse().c_str(), clients[i].getResObj().getResponse().length());
+					std::cout << clients[i].getResObj().getResponse() << std::endl;
+					closeConnection(clients[i].getSocketFd(), i);
+					continue ;
+				}
+			}
 			if (FD_ISSET(clients[i].getSocketFd(), &write_sockets))
 			{
 				writeToClient(clients[i].getSocketFd(), i);
@@ -344,3 +428,7 @@ int		main(int ac, char **av)
 	// }
 	return (0);
 }
+
+// parse only headers value
+// GET => detect carriage return value
+// POST => 

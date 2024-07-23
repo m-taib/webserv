@@ -1,0 +1,31 @@
+67
+----------------------------549788438665280222887909
+Content-Disposition: form-data; name="gfjfgh"
+
+
+8
+67
+2
+
+
+65
+----------------------------549788438665280222887909
+Content-Disposition: form-data; name="name"
+
+
+9
+mohaammed
+3a
+
+----------------------------549788438665280222887909--
+
+0
+
+
+
+
+
+
+103
+
+if chunked you have to read with body size till you find body size value

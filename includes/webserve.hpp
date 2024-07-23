@@ -1,3 +1,4 @@
+#include <_types/_intmax_t.h>
 #include <stdlib.h>
 #include <string>
 #include <sys/socket.h>
@@ -17,6 +18,7 @@
 #include "response.hpp"
 #include "client.hpp"
 
+#define BUFFER_SIZE 1024
 
 typedef struct sockaddr_in SC_IN;
 
@@ -54,6 +56,8 @@ class Server
         std::vector<int >           fds;
         std::vector<Client >        clients; 
         std::vector<ServerConfig>   _config_vec;
-
+        int                         _max_buff;
+	    int		                    buffer_size;
+        int                         _body_size;
 };
 
