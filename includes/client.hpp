@@ -24,5 +24,6 @@ class Client
         int             _socket;
         Request         _request;
         Response        _response;
+
         // ServerConfig    _server;
 };

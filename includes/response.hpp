@@ -25,23 +25,24 @@ class Response
         Response();
         Response(Request);
         
-        HttpResponseLine&     getResponseLine() ;
+        HttpResponseLine&           getResponseLine() ;
         const HttpResponseHeader&   getResponseHeader() const;
         const std::string&          getBody() const;
 
         const std::string&          getResponse() const;
 
-        ServerConfig&               getMacthedServer(std::string&);
-        void                        getMacthedLocation(std::string);
+        void                        setMacthedServer(std::vector<ServerConfig>&, std::string&);
+        void                        setMacthedLocation(std::string);
         
         void                        handleRequest(int fd);
         void                        setConfig(std::vector<ServerConfig>&);
+        ServerConfig                getConfig() const;
 
 
         void                        set_location_vars();
 
         //|=====Errors check======|
-        void                         isLocationHaveRedirection();
+        int                         isLocationHaveRedirection();
         void                         checkHttpVersion(const std::string&);
         void                         checkMethodValidity(const std::string&,std::vector<std::string>&);
         // int                         isUriTooLong(int&);
@@ -49,7 +50,7 @@ class Response
 
         void                         handleGetMethod();
         int                          get_resource_type(std::string&);
-
+        void                         setLocations(std::vector<LOCATION_PAIR >);
         //|=======================|
 
         //|=====GET METHOD======|

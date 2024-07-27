@@ -78,7 +78,7 @@ std::string	 AutoIndex::getContentPage(const std::string& request_path, const st
     std::cout << "requested path : " << response_path << std::endl;
     int ret = stat(response_path.c_str(), &fileInfo);
 
-    if (access(request_path.c_str(), F_OK) == -1)
+    if (access(response_path.c_str(), F_OK) == -1)
     {
         throw "404 Not Found";
     }

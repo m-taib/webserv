@@ -29,3 +29,5 @@ mohaammed
 103
 
 if chunked you have to read with body size till you find body size value
+
+handle chunked errors 

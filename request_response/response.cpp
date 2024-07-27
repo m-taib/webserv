@@ -39,7 +39,7 @@ Response::Response(Request request)
     _http_methods.push_back("CONNECT");
     _http_methods.push_back("PATCH");
 
-    // _directives = getMacthedLocation(_request.get_request_header().get_directives()["PATH"]);
+    // _directives = getMacthedLocation(_request.getRequestHeader().get_directives()["PATH"]);
     _response_line.setHttpVersion("HTTP/1.1");
     _response_line.setStatus("200");
     _response_line.setMessage("OK");
@@ -101,22 +101,25 @@ void		Response::initializeMap(std::string file_name)
 	file.close();
 }
 
-ServerConfig&     Response::getMacthedServer(std::string& host)
+void     Response::setMacthedServer(std::vector<ServerConfig>& config_vec, std::string& host)
 {
-    for (size_t i = 0; i < _config_vec.size() ; i++)
+    for (size_t i = 0; i < config_vec.size() ; i++)
     {
         // you have to compare it to all host value
-        if (host == _config_vec[i].get_dirs()["listen"].front())
+        if (host == config_vec[i].get_dirs()["listen"].front())
         {
             std::cout << "config host : " << host << std::endl;
-            return _config_vec[i];
+             _conf = config_vec[i];
+             return ;
         }
     }
-    std::cout << "host :" << host << std::endl;
-    throw "HOST VALUE NOT MATCHED";
+    std::cout << "HOST VALUE :" << host << std::endl;
+
+    std::cout << "HOST VALUE NOT MATCHED" << std::endl;
+     _conf = config_vec[0];
 }
 
-void     Response::getMacthedLocation(std::string path)
+void     Response::setMacthedLocation(std::string path)
 {
     if (path.rfind("/") == std::string::npos)
         return ;
@@ -130,7 +133,7 @@ void     Response::getMacthedLocation(std::string path)
             location_dirs = _locations[i].second;
         }
     }
-    getMacthedLocation(path.substr(0, path.rfind("/")));
+    setMacthedLocation(path.substr(0, path.rfind("/")));
 }
 
 void        Response::setConfig(std::vector<ServerConfig>& config_vec)
@@ -206,16 +209,17 @@ void        Response::checkBodySize(const unsigned long& body_size, int client_m
         throw "413 Request Entity Too Large";
 }
 
-void       Response::isLocationHaveRedirection()
+int       Response::isLocationHaveRedirection()
 {
     DIRS_PAIR::iterator it = location_dirs.find("return");
-
+    std::cout << "SEARCH FOR A REDIRECTION " << std::endl;
     if (it != location_dirs.end())
     {
         _response_header.setLocation(it->second.back());
-        throw "301 Moved Permanently";
+        std::cout << "REDIRECT TO ('" << it->second.back() << "')" << std::endl;
+        return (1);
     }
-    
+    return (0);
 }
 
 //|=====GET METHOD======|
@@ -293,7 +297,7 @@ void       Response::handleGetMethod()
     std::string path;
 
     path = _conf.getRoot();
-    path += _request.get_request_line().getPath();
+    path += _request.getRequestLine().getPath();
 
    
 
@@ -310,9 +314,9 @@ void       Response::handleGetMethod()
             int needle;
             std::string haystack;
 
-            needle = _request.get_request_line().getPath().find(_location); 
+            needle = _request.getRequestLine().getPath().find(_location); 
             needle += _location.length();
-            haystack = _request.get_request_line().getPath();
+            haystack = _request.getRequestLine().getPath();
             
             std::string ndl =  haystack.substr(needle, _location.length()) ;
             std::cout << "absolute path :" << ndl << std::endl;
@@ -320,7 +324,7 @@ void       Response::handleGetMethod()
             std::cout << "alias : " << path << std::endl;
 
         }
-        if (!isUriHasSlashInend(_request.get_request_line().getPath()))
+        if (!isUriHasSlashInend(_request.getRequestLine().getPath()))
             throw "301 Moved Permanently";
         else if (!isDirHasIndexFiles(path))
         {
@@ -334,7 +338,7 @@ void       Response::handleGetMethod()
                 std::cout << "INDEX VALUE " <<  _conf.getIndex() << std::endl;
                 path += _conf.getIndex();
 
-                _body = AutoIndex::getContentPage(_request.get_request_line().getPath() + _conf.getIndex(), path);
+                _body = AutoIndex::getContentPage(_request.getRequestLine().getPath() + _conf.getIndex(), path);
                 // std::cout << "|================BODY================|" << std::endl;
                 // std::cout << _body << std::endl;
                 // std::cout << "|====================================|" << std::endl;
@@ -344,7 +348,7 @@ void       Response::handleGetMethod()
         {
             std::cout << "ABSOLUTE PATH " << path + _conf.getIndex() << std::endl;
             path += _conf.getIndex();
-            _body = AutoIndex::getContentPage(_request.get_request_line().getPath() + _conf.getIndex(), path);
+            _body = AutoIndex::getContentPage(_request.getRequestLine().getPath() + _conf.getIndex(), path);
         }
     }
     else
@@ -352,7 +356,7 @@ void       Response::handleGetMethod()
         std::cout  << "SERVED A FILE" << std::endl;
         std::cout << "ABSOLUTE PATH : " << path << std::endl;
         
-        _body = AutoIndex::getContentPage(_request.get_request_line().getPath(), path);
+        _body = AutoIndex::getContentPage(_request.getRequestLine().getPath(), path);
     }
     
 
@@ -397,6 +401,15 @@ void    Response::createResponse(std::string& path)
     "\r\n" + _body;
 
 }
+ServerConfig   Response::getConfig() const
+{
+    return _conf;
+}
+
+void           Response::setLocations(std::vector<LOCATION_PAIR > locations)
+{
+    _locations = locations;
+}
 
 void    Response::handleRequest(int fd)
 {
@@ -406,19 +419,19 @@ void    Response::handleRequest(int fd)
     std::string response;
     std::string method;
 
-    _conf = getMacthedServer( _request.get_request_header().get_directives()["Host"]);
-    path = _request.get_request_line().getPath();
+    // _conf = getMacthedServer( _request.getRequestHeader().get_directives()["Host"]);
+    path = _request.getRequestLine().getPath();
     std::cout << "PATH VALUE : " << path << std::endl;
 
     try 
     {
-        _request.isReqWellFormed(fd);
-        checkBodySize(_request.get_body().length(), _conf.getClientMaxBodySize());
+        // _request.isReqWellFormed(fd);
+        checkBodySize(_request.getBody().length(), _conf.getClientMaxBodySize());
         _locations = _conf.get_locations();
-        path_value = _request.get_request_line().getPath();
-        checkHttpVersion(_request.get_request_line().getHttpVersion());
-        getMacthedLocation(path_value);
-        method = _request.get_request_line().getMethod();
+        path_value = _request.getRequestLine().getPath();
+        checkHttpVersion(_request.getRequestLine().getHttpVersion());
+        setMacthedLocation(path_value);
+        method = _request.getRequestLine().getMethod();
 
         if (!location_dirs.empty())
         {
@@ -432,9 +445,9 @@ void    Response::handleRequest(int fd)
             location_dirs = _conf.get_dirs();
         }
         path_value = _conf.getRoot();
-        path_value += _request.get_request_line().getPath();
+        path_value += _request.getRequestLine().getPath();
 
-        isLocationHaveRedirection();
+        // isLocationHaveRedirection();
 
         if (location_dirs.find("allowed_methods") != location_dirs.end())
             checkMethodValidity(method, location_dirs["allowed_methods"]);

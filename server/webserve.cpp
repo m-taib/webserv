@@ -188,6 +188,11 @@ void	Server::acceptConnections(int socketfd, fd_set& current_sockets, std::vecto
 
 }
 
+// read header directive
+// check if there is a redirection 
+// if content length found , read with it and set body
+// if transfer-encoding found and chunked , read with chunk size , erase readed part till you find size = 0
+
 void	Server::readFromClient(int socket, int i)
 {
 	
@@ -195,7 +200,8 @@ void	Server::readFromClient(int socket, int i)
 	std::memset(buffer, 0, buffer_size + 1);
 
 	int nbytes = read(socket, buffer, buffer_size);
-
+	int max_body_size = 0;
+	
 	if(nbytes == 0)
 	{
 		closeConnection(clients[i].getSocketFd(), i);
@@ -208,70 +214,54 @@ void	Server::readFromClient(int socket, int i)
 	}
 	// std::cout << "bytes readed : " << nbytes << std::endl;
 	clients[i].request.append(buffer, nbytes);
-	int		pos;
-
-	pos = clients[i].request.find("\r\n\r\n");
-
-	if (clients[i].request.find("\r\n\r\n") != std::string::npos)
+	
+	if (clients[i].request.find("\r\n\r\n") != std::string::npos && clients[i].getRequest().getRequestLine().getHttpVersion().empty())
 	{
-		clients[i].getRequest().parse_request(clients[i].request);
-		clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd());
-	}
-	if (!clients[i].getRequest().get_request_line().getPath().empty())
-	{
-    	std::map<std::string, std::string> directives = clients[i].getRequest().get_request_header().get_directives();
-		int max_body_size;
+		
+		clients[i].getRequest().parseRequest(clients[i].request);
+		clients[i].setResObj(Response(clients[i].getRequest()));
 
-		clients[i].getResObj().setConfig(_config_vec);
-		max_body_size = clients[i].getResObj().getMacthedServer(clients[i].getRequest().get_request_header().get_directives()["Host"]).getClientMaxBodySize();
-		if (directives.find("Content-Length") != directives.end())
+
+		std::map<std::string, std::string> dirs = clients[i].getRequest().getRequestHeader().get_directives();
+		clients[i].getResObj().setMacthedServer(_config_vec, dirs["Host"]);
+
+		max_body_size = clients[i].getResObj().getConfig().getClientMaxBodySize();
+		clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd(), max_body_size);
+
+		std::cout << "PATH " << clients[i].getRequest().getRequestLine().getPath() << std::endl;
+       	clients[i].getResObj().setLocations(clients[i].getResObj().getConfig().get_locations());
+		
+		clients[i].getResObj().setMacthedLocation(clients[i].getRequest().getRequestLine().getPath());
+		
+        if (clients[i].getResObj().isLocationHaveRedirection())
 		{
-			_max_buff = std::stoi(directives["Content-Length"]);
-
-			
-			// i have to convert body size to bit before compare values
-			std::cout << "MAX BODY SIZE : " << max_body_size << std::endl;
-
-			if (_max_buff > max_body_size)
-        		throw "413 Request Entity Too Large";
+			clients[i].request.clear();
+			throw "301 Moved Permanently";
 		}
-		if (directives.find("Transfer-Encoding") != directives.end() && directives["Transfer-Encoding"] == "chunked"
-				&& clients[i].getRequest().get_request_line().getMethod() == "POST")
-		{
-			int j = pos + 4;
 
-			std::string hex_body_value = "";
+		int		pos;
+		
+		pos = clients[i].request.find("\r\n\r\n");
+		
+		clients[i].request.erase(0, pos + 4);
 
-			while (clients[i].request[j])
-			{
-				if (clients[i].request[j] == '\n')
-					break ;
-				hex_body_value += clients[i].request[j];
-				j++;
-			}
-
-			int body_length = clients[i].getRequest().hexToInt(hex_body_value);
-			
-			if (body_length < buffer_size)
-				buffer_size = body_length;
-			_body_size += body_length;
-			if (_body_size > max_body_size)
-        		throw "413 Request Entity Too Large";
-			std::cout << "body value " << body_length << std::endl;
-		}
 	}
 	// clients[i].request += buffer;
 
 	//GET HEADERS VALUE 
-	if (nbytes < 1024)
+	if (nbytes < buffer_size)
 	{
 		// std::cout << "-------REQUEST--------" << std::endl;
 		// std::cout << clients[i].request << std::endl;
-		std::string buff = buffer;
-
-		pos = clients[i].request.find("\r\n\r\n") + 4;
-		clients[i].request.erase(0, pos);
-		std::cout << "BODY : " << clients[i].request << std::endl;
+		if (clients[i].getRequest().getRequestLine().getMethod() == "POST")
+		{
+			std::cout << "SET BODY " << std::endl;
+			clients[i].getRequest().setBody(clients[i].request, max_body_size);
+			// std::cout << "|=================BODY VAL=================|" << std::endl;
+			// std::cout << clients[i].getRequest().getBody() << std::endl;
+			// std::cout << "|==========================================|" << std::endl;
+		}
+		
 		clients[i].request.clear();
 		
 		// body 
@@ -290,9 +280,7 @@ void	Server::writeToClient(int sock, int i)
 {
 	// std::string reply = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from server";
 
-	clients[i].setResObj(Response(clients[i].getRequest()));
 
-	clients[i].getResObj().setConfig(_config_vec);
 	clients[i].getResObj().handleRequest(clients[i].getSocketFd());
 	// send response
 	// clients[i].getResObj();
@@ -364,10 +352,8 @@ void	Server::establishConnections()
 				acceptConnections(fds[i], current_sockets, clients);	
 		}
 		i = -1;
-		std::cout << "client size : " << clients.size() << std::endl;
-		while (!clients.empty() && ++i < clients.size())
+		while (++i < clients.size())
 		{
-			std::cout << "ENTER CLIENT LOOP " << std::endl;
 			std::cout << "clients[i]._init_time : " << clients[i]._init_time << std::endl;
 			if (get_time() - clients[i]._init_time > 5)
 			{
@@ -389,7 +375,8 @@ void	Server::establishConnections()
 					clients[i].getResObj().getResponseLine().setMessage(exp.substr(exp.find(" ") + 1, 
 							exp.length() - clients[i].getResObj().getResponseLine().getStatus().length()));
     				clients[i].getResObj().createResponse(exp);
-					write(clients[i].getSocketFd(), clients[i].getResObj().getResponse().c_str(), clients[i].getResObj().getResponse().length());
+					write(clients[i].getSocketFd(), clients[i].getResObj().getResponse().c_str(), 
+							clients[i].getResObj().getResponse().length());
 					std::cout << clients[i].getResObj().getResponse() << std::endl;
 					closeConnection(clients[i].getSocketFd(), i);
 					continue ;

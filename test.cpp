@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -29,6 +31,8 @@ int     main()
     _locations.push_back("/usr/bin");
     _locations.push_back("/usr/bin/ls");
     getMacthedLocation("/usr/bin/ls/wc");
-
+    std::fstream ff;
+    std::string line;
+    getline(ff, line);
     return (0);
 }
