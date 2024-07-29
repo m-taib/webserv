@@ -1,5 +1,6 @@
 
 #include "../includes/auto_index.hpp"
+#include <ostream>
 #include <sstream>
 #include <string>
 
@@ -73,62 +74,57 @@ std::string	 AutoIndex::getContentPage(const std::string& request_path, const st
     list            directories_sizes;
     std::string     content_page;
 
-    struct stat fileInfo;
-
     std::cout << "requested path : " << response_path << std::endl;
-    int ret = stat(response_path.c_str(), &fileInfo);
 
-    if (access(response_path.c_str(), F_OK) == -1)
+    
+    if (!access(response_path.c_str(), F_OK))
     {
-        throw "404 Not Found";
-    }
-    if (S_ISREG(fileInfo.st_mode))
-    {
-        // std::cout << "IS FILE" << std::endl;
+        std::cout << "IS FILE" << std::endl;
         content_page = readFile(response_path);
+        return content_page;
     }
-    else 
+    std::string path;
+
+    path = response_path;
+    path = path.substr(0, path.rfind('/') + 1);
+    // Open the directory
+    directory = opendir(path.c_str());
+
+    // Read each entry in the directory
+    while ((entry = readdir(directory)) != NULL)
     {
-
-        // Open the directory
-        directory = opendir(response_path.c_str());
-
-        // Read each entry in the directory
-        while ((entry = readdir(directory)) != NULL)
+        if (entry->d_name[0] == '.')
         {
-            if (entry->d_name[0] == '.')
-            {
-                continue ;
-            }
-            directories_names.push_back(entry->d_name);
-            directories_dates.push_back(getModificationDate(response_path + entry->d_name));
-            directories_sizes.push_back(getFileSize(response_path + entry->d_name));
+            continue ;
         }
-
-        // Close the directory
-
-        closedir(directory);
-        content_page = 
-            "<!DOCTYPE html>\n"
-            "<html lang=\"en\">\n"
-            "<head>\n"
-            "    <meta charset=\"UTF-8\">\n"
-            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-            "    <title>Index of " + request_path + "</title>\n"
-            "</head>\n"
-            "<body>\n"
-            "    <h1>Index of " + request_path + "</h1>\n"
-            "    <hr>\n"
-            "    <ul style=\"margin-right:50px; margin-left:50px;\">\n"
-            "        <!-- Directory listing will be generated here dynamically -->\n"
-            "        <!-- Each list item should represent a file or subdirectory -->\n"
-            "        <!-- You can use server-side scripting or tools to automate this process -->\n"
-                        + getDirectoriesList(directories_names, directories_dates, directories_sizes) +
-            "        <!-- Add more entries as needed -->\n"
-            "    </ul>\n"
-            "    <hr>\n"
-            "</body>\n"
-            "</html>";
+        directories_names.push_back(entry->d_name);
+        directories_dates.push_back(getModificationDate(path + entry->d_name));
+        directories_sizes.push_back(getFileSize(path + entry->d_name));
     }
+
+    // Close the directory
+
+    closedir(directory);
+    content_page = 
+        "<!DOCTYPE html>\n"
+        "<html lang=\"en\">\n"
+        "<head>\n"
+        "    <meta charset=\"UTF-8\">\n"
+        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+        "    <title>Index of " + request_path + "</title>\n"
+        "</head>\n"
+        "<body>\n"
+        "    <h1>Index of " + request_path + "</h1>\n"
+        "    <hr>\n"
+        "    <ul style=\"margin-right:50px; margin-left:50px;\">\n"
+        "        <!-- Directory listing will be generated here dynamically -->\n"
+        "        <!-- Each list item should represent a file or subdirectory -->\n"
+        "        <!-- You can use server-side scripting or tools to automate this process -->\n"
+                    + getDirectoriesList(directories_names, directories_dates, directories_sizes) +
+        "        <!-- Add more entries as needed -->\n"
+        "    </ul>\n"
+        "    <hr>\n"
+        "</body>\n"
+        "</html>";
 	return content_page;
 }

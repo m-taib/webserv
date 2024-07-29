@@ -28,11 +28,19 @@ void     getMacthedLocation(std::string path)
 int     main()
 {
 
-    _locations.push_back("/usr/bin");
-    _locations.push_back("/usr/bin/ls");
-    getMacthedLocation("/usr/bin/ls/wc");
-    std::fstream ff;
-    std::string line;
-    getline(ff, line);
+    // _locations.push_back("/usr/bin");
+    // _locations.push_back("/usr/bin/ls");
+    // getMacthedLocation("/usr/bin/ls/wc");
+    // std::fstream ff;
+    // std::string line;
+    // getline(ff, line);
+    std::vector<std::string > vec;
+
+    vec.push_back("a");
+    vec.push_back("b");
+    vec.push_back("c");
+    vec.clear();
+    if (vec.empty())
+        std::cout << "empty" << std::endl;
     return (0);
 }

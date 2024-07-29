@@ -18,6 +18,7 @@
 #define DIR 1
 #define FILE 0
 #define OFF 0
+#define ON 1
 
 class Response
 {
@@ -31,7 +32,7 @@ class Response
 
         const std::string&          getResponse() const;
 
-        void                        setMacthedServer(std::vector<ServerConfig>&, std::string&);
+        void                        setMacthedServer(std::vector<ServerConfig>&, std::string&, std::string&);
         void                        setMacthedLocation(std::string);
         
         void                        handleRequest(int fd);
@@ -42,7 +43,7 @@ class Response
         void                        set_location_vars();
 
         //|=====Errors check======|
-        int                         isLocationHaveRedirection();
+        int                          isLocationHaveRedirection();
         void                         checkHttpVersion(const std::string&);
         void                         checkMethodValidity(const std::string&,std::vector<std::string>&);
         // int                         isUriTooLong(int&);
@@ -67,6 +68,7 @@ class Response
         static void	initializeMap(std::string file_name);
         static std::map<std::string, std::string > getMimeTypes() ;
         void        createResponse(std::string&);
+        void        handleCgi();
 
     private :
 

@@ -14,7 +14,14 @@ ServerConfig::ServerConfig()
 {
 	
 }
-std::map<std::string, std::vector<std::string> >  ServerConfig::get_dirs() const
+
+ServerConfig::ServerConfig(const ServerConfig& rhs)
+{
+	this->_dirs = rhs._dirs;
+	this->_locations = rhs._locations;
+}
+
+DIRS_PAIR&  ServerConfig::get_dirs() 
 {
 	return _dirs;
 }
@@ -31,6 +38,7 @@ ServerConfig::ServerConfig(std::fstream& file)
 	{
 		while (line.find('\t') != std::string::npos)
 			line = strtok((char *)line.c_str(), "\t");
+
 		std::stringstream s(line);
 
 		// std::cout << line << std::endl;
@@ -125,7 +133,7 @@ ServerConfig::ServerConfig(std::fstream& file)
 	// std::cout << "----------------" << std::endl;
 
 	_root = "/Users/mtaib/Desktop/sockets-programing";
-	_index = "login.html";
+	_index = "index.html";
 	_autoindex = "off";
 }
 

@@ -32,20 +32,65 @@ Server::Server(std::string filename)
 	std::fstream    file;
     std::string     line;
 	std::string 	token;
-	
+	std::string		host;
+
     file.open(filename.c_str(), std::ios::in);
     if (file.is_open())
     {
         while (getline(file, line))
         {
+			if (line.empty())
+				continue ;
 			if (line == "server")
 			{
 				_config_vec.push_back(ServerConfig(file));
 				_config_vec.back().extract_data();
+				std::vector<std::string > ports = _config_vec.back().get_dirs()["listen"];
+
+				for (int i = 0; i < ports.size(); i++)
+				{
+					std::cout << ports[i] << " ";
+				}
+				std::cout << std::endl;
+
 				// exit(0);
+				std::cout << "CONFIG VEC SIZE " << _config_vec.size() << std::endl;
+				if (_config_vec.back().get_dirs()["listen"].size() > 1)
+				{
+					std::vector<std::string > ports = _config_vec.back().get_dirs()["listen"];
+
+					_config_vec.back().get_dirs()["listen"].clear();
+					_config_vec.back().get_dirs()["listen"].push_back(ports[0]);
+
+					for (int i = 1 ; i < ports.size() ; i++)
+					{	
+						_config_vec.push_back(_config_vec.back());
+
+						_config_vec.back().get_dirs()["listen"].clear();
+						_config_vec.back().get_dirs()["listen"].push_back(ports[i]);
+
+					}
+				}
 			}
-			lunchServer();
-			bindSocket();
+
+			host  = _config_vec.back().get_dirs()["listen"].front();
+			int 	i = 0;
+
+			std::cout << "SEARCHED HOST VALUE : " << _config_vec.back().get_dirs()["listen"].front() << std::endl;
+
+			for (i = 0; i < _config_vec.size() - 1; i++)
+			{
+				if (_config_vec[i].get_dirs()["listen"].front() == host)
+				{
+					std::cout << "detect redundent value " << std::endl;
+					break ;
+				}
+			}
+			if (i == _config_vec.size() - 1)
+			{
+				lunchServer();
+				bindSocket();
+			}
 		}
 	}
 	file.close();
@@ -158,7 +203,7 @@ void	Server::bindSocket()
 
 
 
-void	Server::acceptConnections(int socketfd, fd_set& current_sockets, std::vector<Client>& clients)
+void	Server::acceptConnections(int socketfd, fd_set& current_sockets, std::vector<Client>& clients, int server_index)
 {
 	int 	client_fd;
 	struct sockaddr_in client_info;
@@ -185,7 +230,7 @@ void	Server::acceptConnections(int socketfd, fd_set& current_sockets, std::vecto
 	FD_SET(client_fd, &current_sockets);	
 	clients.push_back(Client(client_fd));	
 	clients.back()._init_time = get_time();
-
+	clients.back()._addr = _config_vec[server_index].get_dirs()["listen"].front();
 }
 
 // read header directive
@@ -201,8 +246,9 @@ void	Server::readFromClient(int socket, int i)
 
 	int nbytes = read(socket, buffer, buffer_size);
 	int max_body_size = 0;
-	
-	if(nbytes == 0)
+
+
+	if (nbytes == 0)
 	{
 		closeConnection(clients[i].getSocketFd(), i);
 		return ;
@@ -215,24 +261,25 @@ void	Server::readFromClient(int socket, int i)
 	// std::cout << "bytes readed : " << nbytes << std::endl;
 	clients[i].request.append(buffer, nbytes);
 	
-	if (clients[i].request.find("\r\n\r\n") != std::string::npos && clients[i].getRequest().getRequestLine().getHttpVersion().empty())
+	if (clients[i].request.find("\r\n\r\n") != std::string::npos)
 	{
 		
 		clients[i].getRequest().parseRequest(clients[i].request);
 		clients[i].setResObj(Response(clients[i].getRequest()));
 
-
 		std::map<std::string, std::string> dirs = clients[i].getRequest().getRequestHeader().get_directives();
-		clients[i].getResObj().setMacthedServer(_config_vec, dirs["Host"]);
+		clients[i].getResObj().setMacthedServer(_config_vec, clients[i]._addr, dirs["Host"]);
 
 		max_body_size = clients[i].getResObj().getConfig().getClientMaxBodySize();
 		clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd(), max_body_size);
 
-		std::cout << "PATH " << clients[i].getRequest().getRequestLine().getPath() << std::endl;
+		std::cout << "REQUEST PATH " << clients[i].getRequest().getRequestLine().getPath() << std::endl;
        	clients[i].getResObj().setLocations(clients[i].getResObj().getConfig().get_locations());
 		
 		clients[i].getResObj().setMacthedLocation(clients[i].getRequest().getRequestLine().getPath());
-		
+    	
+		clients[i].getResObj().set_location_vars();
+	
         if (clients[i].getResObj().isLocationHaveRedirection())
 		{
 			clients[i].request.clear();
@@ -280,16 +327,17 @@ void	Server::writeToClient(int sock, int i)
 {
 	// std::string reply = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from server";
 
-
+	std::cout << "START RESPONDING TO CLIENT " << std::endl;
 	clients[i].getResObj().handleRequest(clients[i].getSocketFd());
 	// send response
 	// clients[i].getResObj();
-	// std::cout << "|================RESPONSE================|" << std::endl;
-    // std::cout << clients[i].getResObj().getResponse();
-    // std::cout << "|====================================|" << std::endl;
+	std::cout << "|================RESPONSE================|" << std::endl;
+    std::cout << clients[i].getResObj().getResponse() << std::endl;
+    std::cout << "|====================================|" << std::endl;
 	write(sock, clients[i].getResObj().getResponse().c_str(), clients[i].getResObj().getResponse().length());
 	// clients[i].handle_request_errors();
 	FD_CLR(sock, &write_sockets);
+	// std::cout << "CLEAR CLIENT SOCK NUM => " << sock << std::endl;
 	// FD_CLR(sock, &current_sockets);
 	// close(sock);
 	// clients.erase(clients.begin() + i);
@@ -349,7 +397,7 @@ void	Server::establishConnections()
 		while (++i < fds.size())
 		{
 			if (FD_ISSET(fds[i], &ready_sockets))
-				acceptConnections(fds[i], current_sockets, clients);	
+				acceptConnections(fds[i], current_sockets, clients, i);	
 		}
 		i = -1;
 		while (++i < clients.size())
@@ -363,6 +411,7 @@ void	Server::establishConnections()
 			}
 			if (FD_ISSET(clients[i].getSocketFd(), &ready_sockets))
 			{
+				std::cout << "A CLIENT IS READY TO READ " << std::endl;
 				try
 				{
 					readFromClient(clients[i].getSocketFd(), i);
@@ -377,8 +426,12 @@ void	Server::establishConnections()
     				clients[i].getResObj().createResponse(exp);
 					write(clients[i].getSocketFd(), clients[i].getResObj().getResponse().c_str(), 
 							clients[i].getResObj().getResponse().length());
-					std::cout << clients[i].getResObj().getResponse() << std::endl;
-					closeConnection(clients[i].getSocketFd(), i);
+					// std::cout << clients[i].getResObj().getResponse() << std::endl;
+					if (clients[i].getResObj().getResponseLine().getStatus() != "301")
+					{
+						std::cout << "CLOSED CONNECTION AFTER RESPONSE" << std::endl;
+						closeConnection(clients[i].getSocketFd(), i);
+					}
 					continue ;
 				}
 			}

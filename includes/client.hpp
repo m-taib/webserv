@@ -17,6 +17,7 @@ class Client
         Response&           getResObj();
         void                setResObj(Response);
         void                setIndex(std::string& index);
+        std::string     _addr;
 
     private :
     
@@ -24,6 +25,5 @@ class Client
         int             _socket;
         Request         _request;
         Response        _response;
-
         // ServerConfig    _server;
 };

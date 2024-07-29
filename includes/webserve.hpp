@@ -33,7 +33,7 @@ class Server
         int             getPort() const;
         std::string     getServerAddr() const;
         void            lunchServer();
-        void	        acceptConnections(int socketfd, fd_set& current_sockets, std::vector<Client>& clients);
+        void	        acceptConnections(int socketfd, fd_set& current_sockets, std::vector<Client>& clients, int server_index);
         void            bindSocket();
         void	        establishConnections();
 

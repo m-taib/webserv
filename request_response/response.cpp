@@ -1,6 +1,8 @@
 #include "../includes/response.hpp"
 #include <_stdio.h>
+#include <_types/_intmax_t.h>
 #include <algorithm>
+#include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <sstream>
@@ -101,22 +103,35 @@ void		Response::initializeMap(std::string file_name)
 	file.close();
 }
 
-void     Response::setMacthedServer(std::vector<ServerConfig>& config_vec, std::string& host)
+void     Response::setMacthedServer(std::vector<ServerConfig>& config_vec, std::string& host, std::string& server_name)
 {
+    std::vector<ServerConfig>::iterator it;
+    int     j = 0;
+
     for (size_t i = 0; i < config_vec.size() ; i++)
     {
         // you have to compare it to all host value
         if (host == config_vec[i].get_dirs()["listen"].front())
         {
-            std::cout << "config host : " << host << std::endl;
-             _conf = config_vec[i];
-             return ;
+            if (!j)
+            {
+                std::cout << "FIRST MATCHING SERVER : " << config_vec[i].get_dirs()["server_name"].front() << std::endl;
+                _conf = config_vec[i];
+                j++;
+            }
+            if (config_vec[i].get_dirs().find("server_name") != config_vec[i].get_dirs().end()
+                    && server_name == config_vec[i].get_dirs()["server_name"].front())
+            {
+                std::cout << "CONFIG HOST : " << host << std::endl;
+                std::cout << "SERVER NAME : " << config_vec[i].get_dirs()["server_name"].front() << std::endl;
+                _conf = config_vec[i];
+                return ;
+            }
         }
     }
     std::cout << "HOST VALUE :" << host << std::endl;
 
     std::cout << "HOST VALUE NOT MATCHED" << std::endl;
-     _conf = config_vec[0];
 }
 
 void     Response::setMacthedLocation(std::string path)
@@ -127,10 +142,11 @@ void     Response::setMacthedLocation(std::string path)
     //     return ;
     for (size_t i = 0; i < _locations.size() ; i++)
     {
-        if (path == _locations[i].first)
+        if ( _locations[i].first == path)
         {
             _location = path;
             location_dirs = _locations[i].second;
+            std::cout << "MATCHED LOCATION =====> " << _locations[i].second.begin()->first << std::endl;
         }
     }
     setMacthedLocation(path.substr(0, path.rfind("/")));
@@ -153,7 +169,10 @@ void    Response::set_location_vars()
     if (location_dirs.find("redirection") == location_dirs.end())
 		_conf.setRedirection(str);
 	if (location_dirs.find("autoindex") != location_dirs.end())
-		_conf.setAutoIndex(location_dirs["autoindex"].front());
+    {
+        std::cout << "FOUNDEED" << std::endl;
+        _conf.setAutoIndex(location_dirs["autoindex"].front());
+    }
     if (location_dirs.find("autoindex") == location_dirs.end())
         _conf.setAutoIndex(str);
 	if (location_dirs.find("client_max_body_size") != location_dirs.end())
@@ -184,21 +203,21 @@ void                Response::checkMethodValidity(const std::string& method, std
 
     if (std::find(_http_methods.begin(), _http_methods.end(), method) == _http_methods.end())
         throw "HTTP/1.1 400 Bad Request";
-    if (!method.empty())
-    {
-        std::cout << "METHODS = > ";
-        for (i = 0; i < methods.size(); i++)
-        {
-            std::cout << methods[i] << " ";
-            if (method == methods[i])
-                break ;
-        }
-        std::cout << std::endl;
-        if (i == methods.size())
-            throw "HTTP/1.1 405 Method Not Allowed";
-    }
-    else 
+    if (!methods.size())
+        methods.push_back("GET");
+    if (method != "GET" && method != "POST" && method != "DELETE")
         throw "HTTP/1.1 501 Not Implemented";
+    std::cout << "METHODS = > ";
+    for (i = 0; i < methods.size(); i++)
+    {
+        std::cout << methods[i] << " ";
+        if (method == methods[i])
+            break ;
+    }
+    std::cout << std::endl;
+    if (i == methods.size())
+        throw "HTTP/1.1 405 Method Not Allowed";
+   
 }
 
 
@@ -213,6 +232,7 @@ int       Response::isLocationHaveRedirection()
 {
     DIRS_PAIR::iterator it = location_dirs.find("return");
     std::cout << "SEARCH FOR A REDIRECTION " << std::endl;
+
     if (it != location_dirs.end())
     {
         _response_header.setLocation(it->second.back());
@@ -276,9 +296,10 @@ int     Response::isUriHasSlashInend(const std::string& path)
 
 int     Response::getAutoIndex()
 {
-    if (_conf.get_dirs().find("autoindex") != _conf.get_dirs().end())
+  
+    if (_conf.getAutoIndex() == "on")
     {
-        return (1);
+        return (ON);
     }
     return (OFF);
 }
@@ -291,7 +312,10 @@ std::string     Response::getIndex()
     return ("");
 }
 //|=======================|
+void       Response::handleCgi()
+{
 
+}
 void       Response::handleGetMethod()
 {
     std::string path;
@@ -330,7 +354,7 @@ void       Response::handleGetMethod()
         {
             std::cout << "INDEX NOT FOUND" << std::endl;
             if (getAutoIndex() == OFF)
-                throw "HTTP/1.1 403 Forbidden";
+                throw "403 Forbidden";
             else 
             {
                 std::cout << "AUTO INDEX ON" << std::endl;
@@ -338,7 +362,7 @@ void       Response::handleGetMethod()
                 std::cout << "INDEX VALUE " <<  _conf.getIndex() << std::endl;
                 path += _conf.getIndex();
 
-                _body = AutoIndex::getContentPage(_request.getRequestLine().getPath() + _conf.getIndex(), path);
+                _body = AutoIndex::getContentPage(_request.getRequestLine().getPath(), path);
                 // std::cout << "|================BODY================|" << std::endl;
                 // std::cout << _body << std::endl;
                 // std::cout << "|====================================|" << std::endl;
@@ -355,8 +379,18 @@ void       Response::handleGetMethod()
     {
         std::cout  << "SERVED A FILE" << std::endl;
         std::cout << "ABSOLUTE PATH : " << path << std::endl;
+        std::string ext = _request.getRequestLine().getPath();
         
-        _body = AutoIndex::getContentPage(_request.getRequestLine().getPath(), path);
+        ext = ext.substr(ext.find('.') + 1, ext.length() - ext.find('.'));
+        std::cout << "EXTENSION : " << ext << std::endl;
+        if (location_dirs.find("cgi") != location_dirs.end() &&
+            location_dirs["cgi"].front() == "on" && ext != "html" && ext != "css" && ext != "js")
+        {
+            std::cout << "MUST HANDLED BY CGI " << std::endl;
+            // handleCgi();
+        }
+        else
+            _body = AutoIndex::getContentPage(_request.getRequestLine().getPath(), path);
     }
     
 
@@ -366,6 +400,7 @@ void    Response::createResponse(std::string& path)
 {
     std::string ext;
     
+    std::cout << "CREATE RESPONSE FOR " << path << std::endl;
     if (path.find(".") != std::string::npos)
     {
         ext = path.substr(path.find(".") + 1, (path.length() - path.find(".")));
@@ -430,12 +465,11 @@ void    Response::handleRequest(int fd)
         _locations = _conf.get_locations();
         path_value = _request.getRequestLine().getPath();
         checkHttpVersion(_request.getRequestLine().getHttpVersion());
-        setMacthedLocation(path_value);
         method = _request.getRequestLine().getMethod();
 
         if (!location_dirs.empty())
         {
-            std::cout << "MATCHED LOCATION" << std::endl;
+            std::cout << "MATCHED LOCATION" << location_dirs.begin()->first << std::endl;
             set_location_vars();
             std::cout << "method : |" << method << "|" << std::endl;
         }   
@@ -449,9 +483,7 @@ void    Response::handleRequest(int fd)
 
         // isLocationHaveRedirection();
 
-        if (location_dirs.find("allowed_methods") != location_dirs.end())
-            checkMethodValidity(method, location_dirs["allowed_methods"]);
-
+        checkMethodValidity(method, location_dirs["allowed_methods"]);
         //  CHECK PATH IN ROOT
         std::cout << "P VAL : " << path_value << std::endl;
         if (!checkPathInRoot(path_value))
