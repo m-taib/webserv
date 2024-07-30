@@ -104,3 +104,4 @@ asx             video/x-ms-asf
 asf             video/x-ms-asf                                   
 wmv             video/x-ms-wmv                                   
 avi             video/x-msvideo
+py              text/x-python

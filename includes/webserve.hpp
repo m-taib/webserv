@@ -27,7 +27,7 @@ class Response;
 class Server
 {
     public :
-        Server(std::string filename);
+        Server(std::string filename, char **);
 
         int             getSocketFd() const;
         int             getPort() const;
@@ -59,5 +59,6 @@ class Server
         int                         _max_buff;
 	    int		                    buffer_size;
         int                         _body_size;
+        char                        **_env;
 };
 

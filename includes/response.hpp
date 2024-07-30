@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include "config_file.hpp"
 #include "auto_index.hpp"
+#include "cgi.hpp"
 
 #define DIR 1
 #define FILE 0
@@ -52,6 +53,9 @@ class Response
         void                         handleGetMethod();
         int                          get_resource_type(std::string&);
         void                         setLocations(std::vector<LOCATION_PAIR >);
+        void                         setCgiValues(std::string& path);
+        void                         handleCgi(std::string& path);
+
         //|=======================|
 
         //|=====GET METHOD======|
@@ -68,7 +72,6 @@ class Response
         static void	initializeMap(std::string file_name);
         static std::map<std::string, std::string > getMimeTypes() ;
         void        createResponse(std::string&);
-        void        handleCgi();
 
     private :
 
@@ -81,7 +84,8 @@ class Response
         std::vector<ServerConfig> _config_vec;
         ServerConfig        _conf;
         std::vector<LOCATION_PAIR >   _locations;
-        DIRS_PAIR location_dirs;
+        Cgi     cgi;
+        DIRS_PAIR           location_dirs;
 
         DIRS_PAIR       _directives;
         std::vector<std::string> _http_versions;

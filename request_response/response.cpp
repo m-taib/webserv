@@ -312,9 +312,49 @@ std::string     Response::getIndex()
     return ("");
 }
 //|=======================|
-void       Response::handleCgi()
+void       Response::handleCgi(std::string& path)
 {
+    std::vector<std::string > envs;
+    int     i;
 
+    cgi.setRequestMethod(_request.getRequestLine().getPath());
+    if (cgi.getRequestMethod() == "POST")
+    {
+        if (_request.getRequestHeader().get_directives().find("Content-Type") != _request.getRequestHeader().get_directives().end())
+            cgi.setContentType(_request.getRequestHeader().get_directives()["Content-Type"]);
+        cgi.setContentLength(_request.getBody().size());
+    }
+    cgi.setQueryParams(_request.getRequestLine().getQueryParams());
+    cgi.setScriptName(path);
+
+    envs.push_back("REQUEST_METHOD=" + cgi.getRequestMethod());
+    envs.push_back("QUERY_STRING=" + cgi.getQueryParams());
+    envs.push_back("PATH_INFO=" + path);
+    envs.push_back("CONTENT_TYPE="+ cgi.getContentType());
+
+    std::stringstream s;
+    s << cgi.getContentLength();
+
+    envs.push_back("CONTENT_LENGTH="+ s.str());
+
+    char   **env_vars;
+    
+    env_vars = _request.getEnv();
+    for (i = 0; env_vars[i]; i++);
+    i += envs.size();
+    char *envs_vars[i];
+    for (i = 0; env_vars[i]; i++)
+        envs_vars[i] = env_vars[i];
+    for (int j = 0; j < envs.size(); j++)
+        envs_vars[i++] = (char *)envs[j].c_str();
+    envs_vars[i] = NULL;
+    std::cout << "ENVIRONMENT VARIABLES" << std::endl;
+    for (int i = 0; envs_vars[i]; i++)
+    {
+        std::cout << envs_vars[i] << std::endl;
+    }
+    cgi.setEnv(envs_vars);
+    cgi.execute();
 }
 void       Response::handleGetMethod()
 {
@@ -383,14 +423,21 @@ void       Response::handleGetMethod()
         
         ext = ext.substr(ext.find('.') + 1, ext.length() - ext.find('.'));
         std::cout << "EXTENSION : " << ext << std::endl;
-        if (location_dirs.find("cgi") != location_dirs.end() &&
-            location_dirs["cgi"].front() == "on" && ext != "html" && ext != "css" && ext != "js")
+        for (int i = 0; i < _locations.size(); i++)
         {
-            std::cout << "MUST HANDLED BY CGI " << std::endl;
-            // handleCgi();
+            if (_locations[i].first == "cgi")
+            {
+                if (_locations[i].second.find("." + ext) != _locations[i].second.end())
+                {
+                    std::cout << "MATCHED EXTENSION : " << ext << std::endl;
+                    handleCgi(path);
+                    exit(0);
+                    return ;
+                }
+            }
         }
-        else
-            _body = AutoIndex::getContentPage(_request.getRequestLine().getPath(), path);
+    
+        _body = AutoIndex::getContentPage(_request.getRequestLine().getPath(), path);
     }
     
 
@@ -516,15 +563,3 @@ void    Response::handleRequest(int fd)
     }
     createResponse(path);
 }
-
-
-
-
-
-
-
-
-
-
-
-

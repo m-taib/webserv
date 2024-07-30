@@ -49,10 +49,11 @@ ServerConfig::ServerConfig(std::fstream& file)
 			else if (line == "}")
 				cr_count += 1;
 		}
-		else if (line.find("location") != std::string::npos)  
+		else if (line.find("location") != std::string::npos || line.find("cgi" ) != std::string::npos)  
 		{
 			std::stringstream st(line);
 			std::string location;
+
 			// std::cout << "---------INSIDE LOCATION----------" << std::endl;
 			st >> location;
 			st >> location;
@@ -132,9 +133,7 @@ ServerConfig::ServerConfig(std::fstream& file)
 	// }
 	// std::cout << "----------------" << std::endl;
 
-	_root = "/Users/mtaib/Desktop/sockets-programing";
-	_index = "index.html";
-	_autoindex = "off";
+	
 }
 
 std::vector<std::string>    ServerConfig::split_string(std::string& dirs, std::string del)
@@ -154,12 +153,16 @@ std::vector<std::string>    ServerConfig::split_string(std::string& dirs, std::s
 
 void      ServerConfig::extract_data()
 {
-	std::string dirs = "root redirection autoindex client_max_body_size error_log access_log error_pages allowed_methods mimeTypes";
+	std::string dirs = "index root redirection autoindex client_max_body_size error_log access_log error_pages allowed_methods mimeTypes";
 	std::vector<std::string > dirs_Vec;
 
 	dirs_Vec = split_string(dirs, " ");
 	// check if directive is supported
+	_root = "/Users/mtaib/Desktop/sockets-programing";
+	_index = "index.html";
+	_autoindex = "off";
 
+	
 	if (_dirs.find("root") != _dirs.end())
 		_root = _dirs["root"].front();
 	if (_dirs.find("redirection") != _dirs.end())

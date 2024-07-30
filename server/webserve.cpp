@@ -27,13 +27,14 @@ Server::Server()
 {
 
 }
-Server::Server(std::string filename)
+Server::Server(std::string filename, char **env)
 {
 	std::fstream    file;
     std::string     line;
 	std::string 	token;
 	std::string		host;
 
+	_env = env;
     file.open(filename.c_str(), std::ios::in);
     if (file.is_open())
     {
@@ -45,6 +46,7 @@ Server::Server(std::string filename)
 			{
 				_config_vec.push_back(ServerConfig(file));
 				_config_vec.back().extract_data();
+
 				std::vector<std::string > ports = _config_vec.back().get_dirs()["listen"];
 
 				for (int i = 0; i < ports.size(); i++)
@@ -265,6 +267,7 @@ void	Server::readFromClient(int socket, int i)
 	{
 		
 		clients[i].getRequest().parseRequest(clients[i].request);
+		clients[i].getRequest().setEnv(_env);
 		clients[i].setResObj(Response(clients[i].getRequest()));
 
 		std::map<std::string, std::string> dirs = clients[i].getRequest().getRequestHeader().get_directives();
@@ -444,7 +447,7 @@ void	Server::establishConnections()
 	}
 }
 
-int		main(int ac, char **av)
+int		main(int ac, char **av, char **env)
 {
 	
 	int		server_fd;
@@ -459,7 +462,15 @@ int		main(int ac, char **av)
 
 	// get server config , parse it && create sockets and bind them 
 
-	Server server(av[1]);
+	// std::cout << "ENVIRONMENT VARS" << std::endl;
+	// int i;
+	// for (i = 0; env[i]; i++)
+	// {
+	// 	std::cout << env[i] << std::endl;
+	// }
+	// std::cout << "size : " << i << std::endl;
+	// exit(0);
+	Server server(av[1], env);
 
 	// try {
 		server.establishConnections();

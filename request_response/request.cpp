@@ -9,6 +9,11 @@ Request::Request()
 {
     
 }
+char**       Request::getEnv()
+{
+    return _env;
+}
+
 const HttpRequestLine&    Request::getRequestLine() const
 {
     return _request_line;
@@ -24,11 +29,17 @@ const std::string&        Request::getBody() const
     return _body;
 }
 
+void        Request::setEnv(char **env)
+{
+    _env = env;
+}
+
 void    Request::setRequestLineValues(std::string& request_line)
 {
     std::stringstream s(request_line);
     std::string token;
     std::string values[3];
+    std::string query_params = "";
     int     i = -1;
     
    
@@ -38,7 +49,12 @@ void    Request::setRequestLineValues(std::string& request_line)
     _request_line.setMethod(values[0]);
     _request_line.setPath(values[1]);
     _request_line.setHttpVersion(values[2]);
-    _request_line.setQueryParams("");
+    if (_request_line.getPath().find('?') != std::string::npos)
+    {
+        query_params = _request_line.getPath().substr(_request_line.getPath().find('?') + 1
+                                        , _request_line.getPath().length() - _request_line.getPath().find('?'));
+    }
+    _request_line.setQueryParams(query_params);
     std::cout << "method : " << _request_line.getMethod() << std::endl;
     std::cout << "path : " << _request_line.getPath() << std::endl;
     std::cout << "http_version : |" << _request_line.getHttpVersion() << "|" << std::endl;

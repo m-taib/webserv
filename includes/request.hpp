@@ -32,6 +32,9 @@ class Request
         std::string convertChars(const std::string& path);
         int         hexToInt(const std::string& hexStr);
         void        setBody(std::string, int);
+        void        setEnv(char **env);
+        char        **getEnv();
+        
 
     private :
     
@@ -39,7 +42,7 @@ class Request
         HttpRequestHeader           _request_header;
         std::string    _body;
         std::vector<std::string > body_vec;    
-    
+        char **_env;
 };
 
 #endif

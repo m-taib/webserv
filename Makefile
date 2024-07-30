@@ -6,7 +6,7 @@ OBJ_DIR = obj/
 SERVER_DIR = server/
 COOKIES_DIR = cookies/
 
-REQ_RES_SRC = request.cpp request_header.cpp request_line.cpp response.cpp response_header.cpp response_line.cpp  auto_index.cpp
+REQ_RES_SRC = request.cpp request_header.cpp request_line.cpp response.cpp response_header.cpp response_line.cpp  auto_index.cpp cgi.cpp
 SERVER_SRC = webserve.cpp config_file.cpp CommonDirectives.cpp client.cpp
 #COOKIES_DIR = 
 
