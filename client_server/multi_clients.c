@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <fcntl.h>
 
 #define MAX_CLIENTS 10  // Maximum number of clients to handle concurrently
 
@@ -36,7 +37,7 @@ int main() {
   memset(&server_address, 0, sizeof(server_address));
   server_address.sin_family = AF_INET;
   server_address.sin_addr.s_addr = INADDR_ANY; // Listen on any available address
-  server_address.sin_port = htons(8080);  // Listen on port 8080
+  server_address.sin_port = htons(8181);  // Listen on port 8080
 
   // Bind the socket to the address
   if (bind(server_socket, (struct sockaddr*)&server_address, addrlen) == -1) {
@@ -91,6 +92,13 @@ int main() {
               perror("accept");
               exit(1);
             }
+          int status = fcntl(client_socket, F_SETFL,  O_NONBLOCK);
+
+          if (status == -1)
+          {
+          	perror("calling fcntl");
+          	exit(EXIT_FAILURE);        
+          }
             printf("New client connected from %s:%d (socket: %d)\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port), client_socket);
           }}}}
           }

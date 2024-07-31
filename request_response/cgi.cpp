@@ -71,6 +71,10 @@ void            Cgi::setBin(std::string bin)
     _bin = bin;
 }
 
+void            Cgi::setBody(std::string body)
+{
+    _body = body;
+}
 
 void            Cgi::execute()
 {
@@ -81,44 +85,46 @@ void            Cgi::execute()
     std::string filename;
 
     filename = "output.txt";
-    exec_path = "/usr/local/bin/python3";
+
     if (getRequestMethod() == "POST")
     {
         fd = open(filename.c_str(), O_RDONLY | O_CREAT | O_WRONLY );
         std::ofstream file(filename);
         file << _body;
+        std::cout << "BODY : \n" << _body << std::endl;
+        exit(0);
     }
-    if (!access(getScriptName().c_str(), F_OK | X_OK))
-	{
-		throw "500 INTERNEL SERVER ERROR";
-	}
-   
-    if (pipe(arr) == -1)
-        throw "500 INTERNEL SERVER ERROR";
-	pid = fork();
-	if (pid == -1)
-        throw "500 INTERNEL SERVER ERROR"; 
-	if (pid == 0)
-	{
-        if (getRequestMethod() == "GET")
-            close(arr[0]);
-        else
-        {
-            if (dup2(fd, 0) == -1)
-                throw "500 INTERNEL SERVER ERROR"; 
-        }
-        if (dup2(arr[1],1) == -1)
-            throw "500 INTERNEL SERVER ERROR"; 
-        close(arr[1]);
-        if (execve(exec_path.c_str(), (char **)getScriptName().c_str(), _env))
-        {
-            perror("execve");
-        }
-    }
-	else 
-    {
-        close(arr[0]);
-        close(arr[1]);
-    }
+    // if (!access(getScriptName().c_str(), F_OK | X_OK))
+	// {
+	// 	throw "500 INTERNEL SERVER ERROR";
+	// }
+    
+    // if (pipe(arr) == -1)
+    //     throw "500 INTERNEL SERVER ERROR";
+	// pid = fork();
+	// if (pid == -1)
+    //     throw "500 INTERNEL SERVER ERROR"; 
+	// if (pid == 0)
+	// {
+    //     if (getRequestMethod() == "GET")
+    //         close(arr[0]);
+    //     else
+    //     {
+    //         if (dup2(fd, 0) == -1)
+    //             throw "500 INTERNEL SERVER ERROR"; 
+    //     }
+    //     if (dup2(arr[1],1) == -1)
+    //         throw "500 INTERNEL SERVER ERROR"; 
+    //     close(arr[1]);
+    //     if (execve(exec_path.c_str(), (char **)getScriptName().c_str(), _env))
+    //     {
+    //         perror("execve");
+    //     }
+    // }
+	// else 
+    // {
+    //     close(arr[0]);
+    //     close(arr[1]);
+    // }
 }
 

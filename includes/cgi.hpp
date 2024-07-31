@@ -1,9 +1,9 @@
-
 #include <string>
 #include <map>
 #include <unistd.h>
 #include <fcntl.h>
 #include <fstream>
+#include <iostream>
 
 class Cgi
 {
@@ -25,7 +25,7 @@ class Cgi
         void            setEnv(char **env);
         void            setBin(std::string);
         void            execute();
-        std::string     getBody();
+        void            setBody(std::string);
 
     private :
 

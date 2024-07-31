@@ -187,6 +187,7 @@ void    Request::isReqWellFormed(int sock_fd, int max_body_size)
     if (directives.find("Content-Length") != directives.end())
 	{
         content_length = std::stoi(_request_header.get_directives()["Content-Length"]);
+        std::cout << "Content Length : " << content_length << " " << "max body size : " << max_body_size << std::endl;
         if (content_length > max_body_size)
 		    throw "413 Request Entity Too Large";
     }

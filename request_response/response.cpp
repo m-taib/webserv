@@ -317,25 +317,29 @@ void       Response::handleCgi(std::string& path)
     std::vector<std::string > envs;
     int     i;
 
+    cgi.setBody(_request.getBody());
     cgi.setRequestMethod(_request.getRequestLine().getPath());
     if (cgi.getRequestMethod() == "POST")
     {
         if (_request.getRequestHeader().get_directives().find("Content-Type") != _request.getRequestHeader().get_directives().end())
+        {
             cgi.setContentType(_request.getRequestHeader().get_directives()["Content-Type"]);
+            envs.push_back("CONTENT_TYPE="+ cgi.getContentType());
+        }
         cgi.setContentLength(_request.getBody().size());
+        std::stringstream s;
+
+        s << cgi.getContentLength();
+        envs.push_back("CONTENT_LENGTH="+ s.str());
+
     }
+    else 
+        envs.push_back("QUERY_STRING=" + cgi.getQueryParams());
     cgi.setQueryParams(_request.getRequestLine().getQueryParams());
     cgi.setScriptName(path);
 
     envs.push_back("REQUEST_METHOD=" + cgi.getRequestMethod());
-    envs.push_back("QUERY_STRING=" + cgi.getQueryParams());
     envs.push_back("PATH_INFO=" + path);
-    envs.push_back("CONTENT_TYPE="+ cgi.getContentType());
-
-    std::stringstream s;
-    s << cgi.getContentLength();
-
-    envs.push_back("CONTENT_LENGTH="+ s.str());
 
     char   **env_vars;
     
@@ -429,6 +433,7 @@ void       Response::handleGetMethod()
             {
                 if (_locations[i].second.find("." + ext) != _locations[i].second.end())
                 {
+                    cgi.setBin( _locations[i].second["." + ext].front());
                     std::cout << "MATCHED EXTENSION : " << ext << std::endl;
                     handleCgi(path);
                     exit(0);
@@ -529,7 +534,7 @@ void    Response::handleRequest(int fd)
         path_value += _request.getRequestLine().getPath();
 
         // isLocationHaveRedirection();
-
+        std::cout << "Allowed methods" << std::endl;
         checkMethodValidity(method, location_dirs["allowed_methods"]);
         //  CHECK PATH IN ROOT
         std::cout << "P VAL : " << path_value << std::endl;

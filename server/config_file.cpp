@@ -162,7 +162,7 @@ void      ServerConfig::extract_data()
 	_index = "index.html";
 	_autoindex = "off";
 
-	
+	_client_max_body_size = 0;
 	if (_dirs.find("root") != _dirs.end())
 		_root = _dirs["root"].front();
 	if (_dirs.find("redirection") != _dirs.end())
