@@ -38,7 +38,7 @@ class Response
         
         void                        handleRequest(int fd);
         void                        setConfig(std::vector<ServerConfig>&);
-        ServerConfig                getConfig() const;
+        ServerConfig&                getConfig();
 
 
         void                        set_location_vars();

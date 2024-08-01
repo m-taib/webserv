@@ -2,6 +2,7 @@
 #include "../includes/request.hpp"
 #include "../includes/response.hpp"
 #include <_types/_intmax_t.h>
+#include <arpa/inet.h>
 #include <codecvt>
 #include <cstdio>
 #include <cstdlib>
@@ -172,12 +173,13 @@ void	Server::bindSocket()
 
 	memset((char *)&server_adress, 0, sizeof(server_adress)); 
 	server_adress.sin_family = AF_INET; 
-	server_adress.sin_addr.s_addr = INADDR_ANY;
+	// server_adress.sin_addr.s_addr = INADDR_ANY;
 	// if (inet_pton(AF_INET, addr.c_str(), &server_adress.sin_addr.s_addr) <= 0) 
 	// {
 	// 	perror("inet_pton");
 	// 	exit(1);
 	// }
+
 	dirs = _config_vec.back().get_dirs();
 	value = dirs["listen"].back();
 	if (dirs.find("listen") == dirs.end())
@@ -187,6 +189,8 @@ void	Server::bindSocket()
 	}
 	
 	addr = value.substr(0, value.find(':'));
+	server_adress.sin_addr.s_addr = inet_addr(addr.c_str());
+
 	port = stoi(value.substr(value.find(':') + 1, value.length() - addr.length()));
 	std::cout << "addresse => " << addr << std::endl;
 	std::cout << "port => " << port << std::endl;
@@ -274,6 +278,7 @@ void	Server::readFromClient(int socket, int i)
 		clients[i].getResObj().setMacthedServer(_config_vec, clients[i]._addr, dirs["Host"]);
 
 		max_body_size = clients[i].getResObj().getConfig().getClientMaxBodySize();
+		std::cout << "MAX BODY SIZE : " << max_body_size << std::endl;
 		clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd(), max_body_size);
 
 		std::cout << "REQUEST PATH " << clients[i].getRequest().getRequestLine().getPath() << std::endl;

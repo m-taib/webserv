@@ -318,7 +318,7 @@ void       Response::handleCgi(std::string& path)
     int     i;
 
     cgi.setBody(_request.getBody());
-    cgi.setRequestMethod(_request.getRequestLine().getPath());
+    cgi.setRequestMethod(_request.getRequestLine().getMethod());
     if (cgi.getRequestMethod() == "POST")
     {
         if (_request.getRequestHeader().get_directives().find("Content-Type") != _request.getRequestHeader().get_directives().end())
@@ -334,7 +334,7 @@ void       Response::handleCgi(std::string& path)
 
     }
     else 
-        envs.push_back("QUERY_STRING=" + cgi.getQueryParams());
+        envs.push_back("QUERY_STRING=" + std::string("mohamed=taib&oussama=sajide"));
     cgi.setQueryParams(_request.getRequestLine().getQueryParams());
     cgi.setScriptName(path);
 
@@ -488,7 +488,7 @@ void    Response::createResponse(std::string& path)
     "\r\n" + _body;
 
 }
-ServerConfig   Response::getConfig() const
+ServerConfig&   Response::getConfig() 
 {
     return _conf;
 }
