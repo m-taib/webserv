@@ -11,7 +11,7 @@ class HttpRequestHeader
     public :
 
         HttpRequestHeader();
-        std::map<std::string, std::string> get_directives() const;
+        std::map<std::string, std::string>& get_directives();
         void     set_directives(std::string, std::string);
         int      get_req_state() const;
         void     set_req_state(int state);

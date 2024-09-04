@@ -15,7 +15,7 @@ void      HttpRequestHeader::set_req_state(int state)
 }
 
 
-std::map<std::string, std::string> HttpRequestHeader::get_directives() const
+std::map<std::string, std::string>& HttpRequestHeader::get_directives() 
 {
     return _directives;
 }

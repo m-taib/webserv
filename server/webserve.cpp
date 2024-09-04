@@ -36,6 +36,7 @@ Server::Server(std::string filename, char **env)
 	std::string		host;
 
 	_env = env;
+	
     file.open(filename.c_str(), std::ios::in);
     if (file.is_open())
     {
@@ -47,7 +48,6 @@ Server::Server(std::string filename, char **env)
 			{
 				_config_vec.push_back(ServerConfig(file));
 				_config_vec.back().extract_data();
-
 				std::vector<std::string > ports = _config_vec.back().get_dirs()["listen"];
 
 				for (int i = 0; i < ports.size(); i++)
@@ -249,7 +249,7 @@ void	Server::readFromClient(int socket, int i)
 	
 	char buffer[buffer_size + 1];
 	std::memset(buffer, 0, buffer_size + 1);
-
+	static int length = 0;
 	int nbytes = read(socket, buffer, buffer_size);
 	int max_body_size = 0;
 
@@ -265,11 +265,20 @@ void	Server::readFromClient(int socket, int i)
 		exit(1);
 	}
 	// std::cout << "bytes readed : " << nbytes << std::endl;
-	clients[i].request.append(buffer, nbytes);
-	
-	if (clients[i].request.find("\r\n\r\n") != std::string::npos)
+	clients[i].request.append(buffer);
+	clients[i].tmp.append(buffer);
+	int		pos = 0;
+
+	std::cout << "BUFFER" << std::endl;
+	std::cout << buffer << std::endl;
+	std::cout << "======" << std::endl;
+	if (clients[i].getRequest().getRequestLine().getMethod().empty()
+		&& clients[i].request.find("\r\n\r\n") != std::string::npos)
 	{
 		
+		std::cout << "|=====REQUEST=====|" << std::endl;
+		std::cout << clients[i].request << std::endl;
+		std::cout << "|=================|" << std::endl;
 		clients[i].getRequest().parseRequest(clients[i].request);
 		clients[i].getRequest().setEnv(_env);
 		clients[i].setResObj(Response(clients[i].getRequest()));
@@ -294,38 +303,58 @@ void	Server::readFromClient(int socket, int i)
 			throw "301 Moved Permanently";
 		}
 
-		int		pos;
 		
 		pos = clients[i].request.find("\r\n\r\n");
 		
 		clients[i].request.erase(0, pos + 4);
+		pos = clients[i].tmp.find("\r\n\r\n");
 
+		clients[i].tmp.erase(0, pos + 4);
 	}
 	// clients[i].request += buffer;
 
 	//GET HEADERS VALUE 
-	if (nbytes < buffer_size)
+	if (!clients[i].getRequest().getRequestLine().getMethod().empty() 
+		&& !clients[i].request.empty())
 	{
-		// std::cout << "-------REQUEST--------" << std::endl;
-		// std::cout << clients[i].request << std::endl;
-		if (clients[i].getRequest().getRequestLine().getMethod() == "POST")
-		{
-			std::cout << "SET BODY " << std::endl;
-			clients[i].getRequest().setBody(clients[i].request, max_body_size);
-			// std::cout << "|=================BODY VAL=================|" << std::endl;
-			// std::cout << clients[i].getRequest().getBody() << std::endl;
-			// std::cout << "|==========================================|" << std::endl;
-		}
-		
-		clients[i].request.clear();
-		
-		// body 
+		length += clients[i].request.size();
+		clients[i].getRequest().appendInFile(clients[i].request);
 
-		// clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd());
-	
-		// std::cout << "----------------------" << std::endl;
-		// exit(0);
-		FD_SET(socket, &write_sockets);
+		if (clients[i].request.rfind("\r\n0") == std::string::npos)
+			clients[i].request.clear();
+	}
+
+	std::map<std::string, std::string> dirs = clients[i].getRequest().getRequestHeader().get_directives();
+
+	if (!clients[i].getRequest().getRequestLine().getMethod().empty())
+	{
+		if ((dirs.find("Transfer-Encoding") != dirs.end() && clients[i].request.rfind("\r\n0") != std::string::npos)
+			|| (dirs.find("Content-Length") != dirs.end() && length == std::atoi(dirs["Content-Length"].c_str())))
+		{
+			std::cout << "LAST CHUNKED" << std::endl;
+			// std::cout << "-------REQUEST--------" << std::endl;
+			// std::cout << clients[i].request << std::endl;
+			// if (clients[i].getRequest().getRequestLine().getMethod() == "POST")
+			// {
+			// 	std::cout << "SET BODY " << std::endl;
+				// clients[i].getRequest().setBody(clients[i].request, max_body_size);
+			// 	// std::cout << "|=================BODY VAL=================|" << std::endl;
+			// 	// std::cout << clients[i].getRequest().getBody() << std::endl;
+			// 	// std::cout << "|==========================================|" << std::endl;
+			// }
+			clients[i].getRequest().clearRequest();
+			clients[i].request.clear();
+			clients[i].getRequest().setBody(clients[i].tmp, max_body_size);
+			exit(0);
+			
+			// body 
+
+			// clients[i].getRequest().isReqWellFormed(clients[i].getSocketFd());
+		
+			// std::cout << "----------------------" << std::endl;
+			// exit(0);
+			FD_SET(socket, &write_sockets);
+		}
 	}
 	clients[i]._init_time = get_time();
 

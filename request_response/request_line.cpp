@@ -5,22 +5,22 @@ HttpRequestLine::HttpRequestLine()
     _path = "";
 }
 
-const std::string& HttpRequestLine::getMethod() const
+std::string& HttpRequestLine::getMethod() 
 {
     return _method;
 }
 
-const std::string& HttpRequestLine::getPath() const
+std::string& HttpRequestLine::getPath() 
 {
     return _path;
 }
 
-const std::string& HttpRequestLine::getQueryParams() const
+std::string& HttpRequestLine::getQueryParams() 
 {
     return _query_params;
 }
 
-const std::string& HttpRequestLine::getHttpVersion() const
+std::string& HttpRequestLine::getHttpVersion() 
 {
     return _http_version;
 }

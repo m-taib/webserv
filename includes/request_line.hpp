@@ -9,10 +9,10 @@ class HttpRequestLine
 
         HttpRequestLine();
         // ~HttpRequestLine();
-        const std::string& getMethod() const;
-        const std::string& getPath() const;
-        const std::string& getHttpVersion() const;
-        const std::string& getQueryParams() const;
+        std::string& getMethod();
+        std::string& getPath();
+        std::string& getHttpVersion();
+        std::string& getQueryParams();
         
         void     setMethod(std::string);
         void     setPath(std::string);

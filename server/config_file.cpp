@@ -33,7 +33,7 @@ ServerConfig::ServerConfig(std::fstream& file)
 	std::string 	key;
 	std::string 	value;
 	int             cr_count = 0;
-	
+
 	while (getline(file, line))
 	{
 		while (line.find('\t') != std::string::npos)
@@ -185,3 +185,8 @@ std::vector<LOCATION_PAIR > ServerConfig::get_locations() const
 {
 	return _locations;
 }
+
+// get_requested_resource()
+// get_resource_type()
+// is_uri_has_/_in_end()
+// if_location_has_cgi()

@@ -17,6 +17,8 @@ Response&         Client::getResObj()
 	return _response;
 }
 
+
+
 int      Client::getSocketFd() const
 {
 	return _socket;

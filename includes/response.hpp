@@ -25,7 +25,7 @@ class Response
 {
     public :
         Response();
-        Response(Request);
+        Response(Request&);
         
         HttpResponseLine&           getResponseLine() ;
         const HttpResponseHeader&   getResponseHeader() const;

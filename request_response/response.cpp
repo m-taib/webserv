@@ -22,7 +22,7 @@ Response::Response()
 
 }
 
-Response::Response(Request request) 
+Response::Response(Request& request) 
 { 
 
     _request = request;
@@ -216,7 +216,7 @@ void                Response::checkMethodValidity(const std::string& method, std
     }
     std::cout << std::endl;
     if (i == methods.size())
-        throw "HTTP/1.1 405 Method Not Allowed";
+        throw "405 Method Not Allowed";
    
 }
 

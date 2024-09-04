@@ -11,16 +11,22 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <unistd.h>
 
 class Request
 {
     public :
 
         Request();
+        Request(const Request&);
+        Request& operator=(const Request&);
+        ~Request();
+        
+        HttpRequestLine&    getRequestLine();
+        HttpRequestHeader&  getRequestHeader();
+        std::string&        getBody();
 
-        const HttpRequestLine&    getRequestLine() const;
-        const HttpRequestHeader&  getRequestHeader() const;
-        const std::string&        getBody() const;
+        void                clearRequest();
 
         void        setRequestLineValues(std::string&);
         void        setRequestHeaderValues(std::string);
@@ -31,10 +37,11 @@ class Request
         int         isUriTooLong(int uri_size);
         std::string convertChars(const std::string& path);
         int         hexToInt(const std::string& hexStr);
-        void        setBody(std::string, int);
+        void        setBody(std::string&, int);
         void        setEnv(char **env);
         char        **getEnv();
-        
+        void        appendInFile(std::string chunk);
+        std::fstream&   getFile();
 
     private :
     
@@ -43,6 +50,8 @@ class Request
         std::string    _body;
         std::vector<std::string > body_vec;    
         char **_env;
+	    std::fstream    file;
+        std::fstream    body;
 };
 
 #endif

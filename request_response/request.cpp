@@ -1,5 +1,7 @@
 #include "../includes/request.hpp"
 #include <cstdio>
+#include <cstring>
+#include <ios>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -9,22 +11,52 @@ Request::Request()
 {
     
 }
+
+Request::Request(const Request& rhs)
+{
+    *this = rhs;
+}
+Request& Request::operator=(const Request& rhs)
+{
+    _request_line = rhs._request_line;
+    _request_header = rhs._request_header;
+    _body = rhs._body; 
+    body_vec = rhs.body_vec;    
+    _env = rhs._env;
+    
+    return (*this);
+}
+
+Request::~Request()
+{
+
+}
 char**       Request::getEnv()
 {
     return _env;
 }
 
-const HttpRequestLine&    Request::getRequestLine() const
+void         Request::clearRequest()
+{
+	_request_line.getMethod().clear();
+	_request_line.getHttpVersion().clear();
+	_request_line.getPath().clear();
+	_request_line.getQueryParams().clear();
+
+    _request_header.get_directives().clear();
+    
+}
+HttpRequestLine&    Request::getRequestLine() 
 {
     return _request_line;
 }
 
-const HttpRequestHeader&  Request::getRequestHeader() const
+HttpRequestHeader&  Request::getRequestHeader() 
 {
     return _request_header;
 }
 
-const std::string&        Request::getBody() const
+std::string&        Request::getBody() 
 {
     return _body;
 }
@@ -117,7 +149,7 @@ void	Request::parseRequest(std::string content)
 
 int             Request::hexToInt(const std::string& hexStr) 
 {
-    std::cout << "hex value : " << hexStr << std::endl;
+    // std::cout << "hex value : " << hexStr << std::endl;
     return std::stoi(hexStr, nullptr, 16);
 }
 
@@ -217,7 +249,41 @@ void    Request::isReqWellFormed(int sock_fd, int max_body_size)
     // std::cout << "REACHED BOTTOM" << std::endl;
 }
 
-void    Request::setBody(std::string body_val, int max_body_size)
+
+// void    Request::setBody(std::string& body_val, int max_body_size)
+// {
+//     std::map<std::string, std::string > dirs = _request_header.get_directives();
+//     std::string     token;
+//     int             chunk_size;
+
+//     if (dirs.find("Content-Length") != dirs.end())
+//         return ;
+//     file.open("test.txt", std::ios::in);
+//     body.open("body.txt", std::ios::app);
+//     if (file.is_open() && body.is_open())
+//     {
+//         while (1)
+//         { 
+//             getline(file, token);
+//             token = token.substr(0, '\r');
+//             chunk_size = hexToInt(token);
+//             if (!chunk_size)
+//                 break ;
+//             char buff[chunk_size + 1];
+
+//             memset(buff, 0, chunk_size + 1);
+//             file.seekg(token.size() + 2, std::ios::beg);
+//             file.read(buff, chunk_size);
+//             file.seekg(chunk_size, std::ios::beg);
+//             body.write(buff, chunk_size);
+//         }
+//         body.close();
+//         file.close();
+//     }
+   
+// }
+
+void    Request::setBody(std::string& body_val, int max_body_size)
 {
     std::string     token;
     std::string     chunk;
@@ -267,23 +333,84 @@ void    Request::setBody(std::string body_val, int max_body_size)
 			throw "413 Request Entity Too Large";
 
         i = 0;
-        while (i < chunk_size && i < body_val.size())
-            chunk += body_val[i++];
+        chunk = body_val.substr(0, chunk_size);
        
         if (chunk.size() != chunk_size)
             std::cout <<  "400 Bad Request" << std::endl;
 
         _body += chunk;
-        body_val.erase(0, chunk_size + 2);
+        body_val.erase(0, chunk_size);
         body_vec.push_back(chunk);
     }
+    std::cout << "|==========BODY==========" << std::endl; 
+    std::cout << _body << std::endl;
+    std::cout << "|========================|" << std::endl;
     // i = 0;
-    std::cout << "body : " << std::endl;
-    std::cout << chunk << std::endl;
-    std::cout << "=======" << std::endl;
+    // std::cout << "body : " << std::endl;
+    // std::cout << _body << std::endl;
+    // std::cout << "=======" << std::endl;
     // std::cout << body << std::endl;
    
 }
+
+void        Request::appendInFile(std::string chunk)
+{
+    file.open("test.txt", std::ios::app);
+    if (file.is_open())
+    {
+        file.write(chunk.c_str(), chunk.size());
+    }
+    file.close();
+}
+
+std::fstream&   Request::getFile()
+{
+    return file;
+}
+
+
+
+// int    Request::setBody(std::string& body_val, int max_body_size)
+// {
+//     std::string     token;
+//     int             chunk_size = 0;
+// 	std::fstream    file;
+//     static int      content_length;
+//     int             len = 0;
+
+//     file.open("test.txt" , std::ios::app);
+//     if (file.is_open())
+//     {
+
+//         if (!content_length)
+//         {
+//             token =  body_val.substr(0, body_val.find('\r'));
+//             chunk_size = hexToInt(token);
+//             body_val.erase(0,  token.length() + 2);
+//             content_length = chunk_size;
+//         }
+//         if (content_length > body_val.length())
+//             len = body_val.length();
+//         else 
+//             len = content_length;
+//         token = body_val.substr(0, len);
+//         body_val.erase(0, len);
+
+//         if (body_val.find("\r\n0") != std::string::npos)
+//         {
+           
+//             body_val = body_val.substr(0, body_val.find("\r\n0"));
+//             token.append(body_val);
+//             file << token;
+//             return (0);
+//         }
+
+//         content_length -= len;
+//         file << token;
+//     }
+//     file.close();
+//     return (len);
+// }
 
 
 
